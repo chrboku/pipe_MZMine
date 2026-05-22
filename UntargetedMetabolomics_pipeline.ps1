@@ -39,6 +39,7 @@ $FEATURERENAMESCRIPT = "$WDIR\scripts\rename_MZMine_results.py"
 $MGFFIXILE = "$WDIR\scripts\fix_SIRIUS_mgfs.py"
 $SIRIUSGETFINGERPRINTS = "$WDIR\scripts\SIRIUS_getFingerprints.py"
 $COMBINEEXPERIMENTS = "$WDIR\scripts\combineMZMineWithMEII.py"
+$DDAINCLUSIONLIST = "$WDIR\scripts\create_DDA_inclusion_list.py"
 
 
 
@@ -198,9 +199,18 @@ function Process {
         #Write-Host "$Task.1.5. Reordering the full feature table and quantification files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
         #& uv run --project  C:\development\util_ReorderTSVFiles C:\development\util_ReorderTSVFiles\main.py "$WDIR\$OUTDIR\${TASK}__full_feature_table_combined.tsv" --output_file "${TASK}__full_feature_table_combined_reordered.tsv" --sort_regexes "id.*" "^mz$" "^rt$" "datafile:.*:area" --not_include_other_columns
 
+        # Create DDA inclusion list from full feature table
+        Write-Host "`n`n`n-----------------------------------------------------"
+        Write-Host "$Task.1.6. Creating DDA inclusion list" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        & uv run "$DDAINCLUSIONLIST" `
+          --input_file "$WDIR\$OUTDIR\${Task}__full_feature_table.csv" `
+          --output_file "$WDIR\$OUTDIR\${Task}__DDA_inclusion_list_IQX.csv" `
+          --rt_window 0.1 `
+          | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+
         # Convert csv files to tsv file for easier opening with Excel
         Write-Host "`n`n`n-----------------------------------------------------"
-        Write-Host "$Task.1.6. Converting CSV files to TSV files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        Write-Host "$Task.1.7. Converting CSV files to TSV files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table.tsv"
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.tsv"
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__annotations.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__annotations.tsv"

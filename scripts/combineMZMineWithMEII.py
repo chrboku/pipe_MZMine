@@ -6,7 +6,6 @@ import argparse
 import polars as pl
 import chardet
 import numpy as np
-import pandas as pd
 import plotnine as p9
 import matplotlib
 import matplotlib.pyplot as plt
@@ -405,7 +404,7 @@ def find_mapping(
             max_ppm = np.max(ppm_diff[mask])
             max_rt = np.max(rt_diff[mask])
             if max_ppm - min_ppm <= 1 and max_rt - min_rt <= 0.02:
-                print(ca.Fore.YELLOW + f"     - MZ and RTs of matched are similar, selecting the one with the highest Xn count")
+                print(ca.Fore.YELLOW + "     - MZ and RTs of matched are similar, selecting the one with the highest Xn count")
 
                 # Select the match with the highest Xn count
                 mask = np.array([mask[np.argmax(ref_Xn[mask])]])
@@ -439,7 +438,7 @@ def find_mapping(
             )
             print(ca.Fore.GREEN + f'   - Mapped query {qid} (mz: {que_mz[i]}, rt: {que_rt[i]} min) to reference {ref_id[ref_idx]} (mz: {ref_mz[ref_idx]:.4f}, rt: {ref_rt[ref_idx]:.2f} min), ppm diff: {ppm_diff[ref_idx]:.2f} ppm, rt diff: {rt_diff[ref_idx]:.2f} min, score: {score[0]:.2f}' + ca.Style.RESET_ALL + "\n")
         else:
-            print(ca.Fore.RED + f"     - Could not resolve ambiguity, ignoring query feature for now" + ca.Style.RESET_ALL + "\n")
+            print(ca.Fore.RED + "     - Could not resolve ambiguity, ignoring query feature for now" + ca.Style.RESET_ALL + "\n")
 
     # Print mapping summary
     print(f"   - Found {no_matches} features with no match in the reference")
@@ -576,7 +575,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     print("----------------------------------------------------------------")
-    print(f"Tool to combine Metabolomics Experiments")
+    print("Tool to combine Metabolomics Experiments")
     print("----------------------------------------------------------------\n")
 
     print("Arguments:")
@@ -713,7 +712,7 @@ if __name__ == "__main__":
         print(f"   - Processing additional query file: {file}")
 
         if file.endswith(".tsv") or file.endswith(".txt") or file.endswith(".csv"):
-            print(f"     table file detected.")
+            print("     table file detected.")
             additional_query_df = import_file(file)
             print(f"     has {additional_query_df.shape[0]} rows and {additional_query_df.shape[1]} columns.")
             additional_query_df = additional_query_df.with_columns(pl.col(que_id).alias("id_mzmine4"))
@@ -756,7 +755,7 @@ if __name__ == "__main__":
             print(f"     - Matched-only file saved as: {matched_query_file_path}")
 
         elif file.endswith(".mgf"):
-            print(f"     mgf file detected.")
+            print("     mgf file detected.")
             blocks = parse_mgf_file(file)
             num_blocks = sum(len(feature_blocks) for feature_blocks in blocks.values())
             print(f"     Number of parsed entries: {num_blocks}")
@@ -789,7 +788,7 @@ if __name__ == "__main__":
             print(f"     - Matched-only file saved as: {matched_mgf_path}")
 
         elif file.endswith(".graphml"):
-            print(f"     graphml file detected.")
+            print("     graphml file detected.")
             # Parse the graphml file
             with open(file, "r") as file:
                 soup = BeautifulSoup(file, "xml")
