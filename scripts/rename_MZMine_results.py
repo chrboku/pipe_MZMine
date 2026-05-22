@@ -1,7 +1,10 @@
+# /// script
+# dependencies = ["polars", "pyarrow", "chardet", "numpy", "pandas", "plotnine", "matplotlib", "colorama", "bs4", "lxml"]
+# ///
+
 import argparse
 from collections import OrderedDict
 import polars as pl
-import random
 import re
 from bs4 import BeautifulSoup
 
@@ -94,13 +97,13 @@ print(f"  - MGFs: {mgfs}")
 
 
 # Read the full feature table CSV file
-full_feature_table_df = pl.read_csv(full_feature_table, separator=",", has_header=True)
+full_feature_table_df = pl.read_csv(full_feature_table, separator=",", has_header=True, infer_schema_length=None)
 
 # Read the annotations CSV file
-df_annotations = pl.read_csv(args.annotations, separator=",", has_header=True)
+df_annotations = pl.read_csv(args.annotations, separator=",", has_header=True, infer_schema_length=None)
 
 # Read the IIMN FBMN quantification CSV file
-iimn_fbmn_quant_df = pl.read_csv(iimn_fbmn_quant, separator=",", has_header=True, truncate_ragged_lines=True)
+iimn_fbmn_quant_df = pl.read_csv(iimn_fbmn_quant, separator=",", has_header=True, truncate_ragged_lines=True, infer_schema_length=None)
 
 mgfs_data = {}
 for mgf in mgfs:
@@ -124,10 +127,10 @@ for i in range(len(full_feature_table_df)):
     add = ""
     id = full_feature_table_df["id"][i]
     add = makeAdd(full_feature_table_df[i])
-    if add is not None and add != "":
-        print(f"   - {id}, renaming to {id}{add}")
-    else:
-        print(f"   - {id}, not adding anything")
+    #if add is not None and add != "":
+    #    print(f"   - {id}, renaming to {id}{add}")
+    #else:
+    #    print(f"   - {id}, not adding anything")
 
     IDmapping[full_feature_table_df["id"][i]] = add
 

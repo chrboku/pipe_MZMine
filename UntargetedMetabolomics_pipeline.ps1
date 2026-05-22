@@ -10,8 +10,7 @@ $ErrorActionPreference = "Stop"
 $MZMINE = ".\mzmine_Windows_portable-4.5.20\mzmine_console.exe"
 $SIRIUS = ".\sirius-6.2.2-win-x64\sirius.exe"
 $WDIR = "."
-$PY = "D:\BIOINFORMATICS\mambaforge\envs\pysirius\python.exe"
-$OUTDIR = "results"
+$OUTDIR = "..\mzmine__results"
 
 $PROCMZMINE = 1
 $PROCSIRIUS = 0
@@ -19,10 +18,16 @@ $ARCHIVERESULTS = 0
 
 ## Define tasks as a dictionary with additional information
 $TaskParams = @{
-    "data_pos" =  @{"MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; "polarity" = "positive"; "input_files" = "MBOA.txt"};
-    "data_neg" =  @{"MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; "polarity" = "negative"; "input_files" = "MBOA.txt"};
-    "std_neg" =  @{"MZmine_batch" = "mzmine_batch_files/process_std_shortMethod_negMode.mzbatch"; "polarity" = "negative"; "input_files" = "MBOA.txt"};
-    "std_pos" =  @{"MZmine_batch" = "mzmine_batch_files/process_std_shortMethod_posMode.mzbatch"; "polarity" = "positive"; "input_files" = "MBOA.txt"};
+    "data_pos" =  @{
+	"MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+	"polarity" = "positive"; 
+	"input_files" = "..\input_MS1_pos.txt"
+    };
+    "data_neg" =  @{
+	"MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+	"polarity" = "negative"; 
+	"input_files" = "..\input_MS1_neg.txt"
+    };
 }
 # Default tasks to be processed
 $Tasks = ($TaskParams.Keys | Sort-Object | ForEach-Object { $_ }) -join ", "
@@ -33,6 +38,7 @@ $PROCESSBATCHFILE = "$WDIR\scripts\process_batch.mzbatch"
 $FEATURERENAMESCRIPT = "$WDIR\scripts\rename_MZMine_results.py"
 $MGFFIXILE = "$WDIR\scripts\fix_SIRIUS_mgfs.py"
 $SIRIUSGETFINGERPRINTS = "$WDIR\scripts\SIRIUS_getFingerprints.py"
+$COMBINEEXPERIMENTS = "$WDIR\scripts\combineMZMineWithMEII.py"
 
 
 
@@ -41,18 +47,32 @@ $SIRIUSGETFINGERPRINTS = "$WDIR\scripts\SIRIUS_getFingerprints.py"
 ##################################################################################################################################################
 ## Functions
 
-# Check if Python, SIRIUS, and MZmine are installed/available
-function CheckPython {
-    param ([string]$PythonPath)
-    if (Test-Path $PythonPath) {
+# convert csv file with delimiter default (,) , to tab-delimited tsv file
+function ConvertCsvToTsv {
+    param (
+        [string]$CsvFilePath,
+        [string]$TsvFilePath
+    )
+    if (Test-Path $CsvFilePath) {
+        Import-Csv -Path $CsvFilePath -Delimiter "," | Export-Csv -Path $TsvFilePath -Delimiter "`t" -NoTypeInformation
     } else {
-        Write-Host "Python not found at $PythonPath"
-        Write-Host "Please ensure Python is available at $PythonPath or adapt the path. If needed, refer to the README for instructions on setting up a miniforge environment with SIRIUS."
-        
+        Write-Host "Error: CSV file not found at $CsvFilePath"
         Write-Host "Press any key to exit..."
         [void][System.Console]::ReadKey($true)
         exit 1
     }
+}
+
+# Check if Python, SIRIUS, and MZmine are installed/available
+function CheckUV {
+    if (Get-Command "uv" -ErrorAction SilentlyContinue) {
+    } else {
+        Write-Host "UV not found. Please ensure UV is installed and available in the system PATH. If needed, refer to the README for instructions on setting up UV."
+        
+        Write-Host "Press any key to exit..."
+        [void][System.Console]::ReadKey($true)
+        exit 1
+    }    
 }
 
 function CheckSirius {
@@ -131,25 +151,18 @@ function Process {
             Move-Item "$WDIR\$OUTDIR\${Task}__annotations" "$WDIR\$OUTDIR\${Task}__annotations.csv" -Force
         }
 
-        if ($Task -like "std_*") {
-            Write-Host "End of processing for standard task: $Task"
-            Write-Host "Open the mzMine project file '$WDIR\$OUTDIR\${Task}__mzmineproject.mzmine' in MZmine to continue with the standard check/annotation/verification and export the results as an MGF file using the <Feature list method> -> <Export feature list> -> <Libraries> -> <Batch spectral library generation> module."
-            Write-Host "Set the important parameters in the module, namely:"
-            Write-Host "Export format: mgf"
-            Write-Host "Meta-data: Acquisition: Commercial"
-            Write-Host "Intensity normalization: Highest signal as 100%"
-            Write-Host ""
-            Write-Host "Then normalize the MGF file"
-            Write-Host "uv run --project C:\development\util_MGFTools\ C:\development\util_MGFTools\main.py normalize --input .\std_XXX.mgf --output .\std_XXX_normalizedToMax.mgf --intensity-threshold 1.0 --method relToMax"
-            Write-Host ""
-            Write-Host ""
-            return
-        }
-
         # Rename the full feature table and quantification files
         Write-Host "`n`n`n-----------------------------------------------------"
-        Write-Host "$Task.1.5. Renaming feature IDs" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
-        & $PY "$FEATURERENAMESCRIPT" --full_feature_table "$WDIR\$OUTDIR\${Task}__full_feature_table.csv" --annotations "$WDIR\$OUTDIR\${Task}__annotations.csv" --iimn_fbmn_quant "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.csv" --graphml "$WDIR\$OUTDIR\${Task}__networks_fbmn.graphml" --mgf "$WDIR\$OUTDIR\${Task}__iimn_fbmn.mgf" "$WDIR\$OUTDIR\${Task}__sirius.mgf" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        Write-Host "$Task.1.1. Renaming feature IDs" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        & uv run "$FEATURERENAMESCRIPT" `
+          --full_feature_table "$WDIR\$OUTDIR\${Task}__full_feature_table.csv" `
+          --annotations "$WDIR\$OUTDIR\${Task}__annotations.csv" `
+          --iimn_fbmn_quant "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.csv" `
+          --graphml "$WDIR\$OUTDIR\${Task}__networks_fbmn.graphml" `
+          --mgf "$WDIR\$OUTDIR\${Task}__iimn_fbmn.mgf" "$WDIR\$OUTDIR\${Task}__sirius.mgf" `
+          | Tee-Object  `
+          -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt"  `
+          -Append
 
         ## Split MGF file
         #Write-Host "`n`n`n-----------------------------------------------------"
@@ -159,20 +172,39 @@ function Process {
 
         ## Clean 12C13C spectra
         #Write-Host "`n`n`n-----------------------------------------------------"
-        #Write-Host "$Task.1.2. Cleaning 12C13C spectra" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        #Write-Host "$Task.1.3. Cleaning 12C13C spectra" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
         #C:\development\util_FragExtract\rust_impl\target\debug\rust_impl.exe --input-mgf "$WDIR\$OUTDIR\${Task}__sirius__MS2_Pall_FMall_CEall.mgf" --output-folder "$WDIR\$OUTDIR\${Task}__sirius__MS2_Pall_FMall_CEall_matchedCleaned"
         #C:\development\util_FragExtract\rust_impl\target\debug\rust_impl.exe --input-mgf "$WDIR\$OUTDIR\${Task}__iimn_fbmn__MS2_Pall_FMall_CEall.mgf" --output-folder "$WDIR\$OUTDIR\${Task}__iimn_fbmn__MS2_Pall_FMall_CEall_matchedCleaned"
 
         ## Combine results with MEII processing
         #Write-Host "`n`n`n-----------------------------------------------------"
-        #Write-Host "$Task.1.3. Combining results with MEII" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
-        #$MEIIREFFILE = "I:\AISHEE_20231130\BSK_AISHEE_20231130_allFeatures\dataOut\univar_results.tsv"
-        #& uv run --project  C:\development\util_CombineMetExperiments C:\development\util_CombineMetExperiments\main.py --plot_file "$WDIR\$OUTDIR\${Task}_mapped_features.pdf" --remove_non_matched --polarity $TaskParams[$Task].polarity --avg_rt_shift +0.18 --avg_mz_ppm_shift -0.2 --max_rt_difference_min 0.15 --reference_file "$MEIIREFFILE" --query_file "$WDIR\$OUTDIR\${TASK}__full_feature_table.csv" --additional_query_file "$WDIR\$OUTDIR\${TASK}__iimn_fbmn.mgf" --additional_query_file "$WDIR\$OUTDIR\${TASK}__sirius__MS2_Pall_FMall_CEall_matchedCleaned.mgf" --additional_query_file "$WDIR\$OUTDIR\${TASK}__iimn_fbmn__MS2_Pall_FMall_CEall_matchedCleaned.mgf" --additional_query_file "$WDIR\$OUTDIR\${TASK}__iimn_fbmn__MS2_Pall_FMall_CEall.mgf"
+        #Write-Host "$Task.1.4. Combining results with MEII" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        #$MEIIREFFILE = "H:\LV_comparison\Data\LV2026\Fullscan\FPS\results.tsv"
+        #& uv run "$COMBINEEXPERIMENTS" `
+        #  --plot_file "$WDIR\$OUTDIR\${Task}_mapped_features.pdf" `
+        #  --remove_non_matched `
+        #  --polarity $TaskParams[$Task].polarity `
+        #  --avg_rt_shift 0.0 `
+        #  --avg_mz_ppm_shift 0.0 `
+        #  --max_rt_difference_min 0.15 `
+        #  --max_mz_difference_ppm 5.0 `
+        #  --reference_file "$MEIIREFFILE" `
+        #  --query_file "$WDIR\$OUTDIR\${TASK}__full_feature_table.csv" `
+        #  --additional_query_file "$WDIR\$OUTDIR\${TASK}__iimn_fbmn.mgf" `
+        #  --additional_query_file "$WDIR\$OUTDIR\${TASK}__sirius.mgf" 
         
         ## Reorder table
         #Write-Host "`n`n`n-----------------------------------------------------"
-        #Write-Host "$Task.1.4. Reordering the full feature table and quantification files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        #Write-Host "$Task.1.5. Reordering the full feature table and quantification files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
         #& uv run --project  C:\development\util_ReorderTSVFiles C:\development\util_ReorderTSVFiles\main.py "$WDIR\$OUTDIR\${TASK}__full_feature_table_combined.tsv" --output_file "${TASK}__full_feature_table_combined_reordered.tsv" --sort_regexes "id.*" "^mz$" "^rt$" "datafile:.*:area" --not_include_other_columns
+
+        # Convert csv files to tsv file for easier opening with Excel
+        Write-Host "`n`n`n-----------------------------------------------------"
+        Write-Host "$Task.1.6. Converting CSV files to TSV files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+        ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table.tsv"
+        ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.tsv"
+        ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__annotations.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__annotations.tsv"
+        ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_edges_msannotation.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_edges_msannotation.tsv"
         
     } else {
         Write-Host "$Task.1. Skipping MZmine step as PROCMZMINE is not set to 1"
@@ -185,7 +217,7 @@ function Process {
         Copy-Item "$MGFFIXILE" "$WDIR\$OUTDIR\params_scripts_etc\"
         
         # Fix the MGF file for SIRIUS
-        & $PY "$MGFFIXILE" --mgf_file "$WDIR\$OUTDIR\${Task}__sirius.mgf" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.2_SIRIUS_log.txt" -Append
+        & uv run "$MGFFIXILE" --mgf_file "$WDIR\$OUTDIR\${Task}__sirius.mgf" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.2_SIRIUS_log.txt" -Append
 
         # Process with SIRIUS
         Write-Host "$Task.2.2. Predicting fingerprints" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.2_SIRIUS_log.txt" -Append
@@ -203,7 +235,7 @@ function Process {
 
         #Write-Host "$Task.2.3. Exporting SIRIUS fingerprints" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.2_SIRIUS_log.txt" -Append
         #Copy-Item "$SIRIUSGETFINGERPRINTS" "$WDIR\$OUTDIR\params_scripts_etc\"
-        #& $PY "$SIRIUSGETFINGERPRINTS" --sirius_path $SIRIUS --sirius_project "$WDIR\$OUTDIR\${Task}__sirius.sirius" --output_json "$WDIR/$OUTDIR/${Task}__sirius_fingerprints.json" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.2_SIRIUS_log.txt" -Append
+        #& uv "$SIRIUSGETFINGERPRINTS" --sirius_path $SIRIUS --sirius_project "$WDIR\$OUTDIR\${Task}__sirius.sirius" --output_json "$WDIR/$OUTDIR/${Task}__sirius_fingerprints.json" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.2_SIRIUS_log.txt" -Append
 
     } else {
         Write-Host "$Task.2. Skipping SIRIUS step as PROCSIRIUS is not set to 1"
@@ -245,7 +277,7 @@ Write-Host ""
 
 ##################################################################################################################################################
 ## Check if the required software is installed/available
-CheckPython $PY
+CheckUV
 CheckSirius $SIRIUS
 CheckMzmine $MZMINE
 

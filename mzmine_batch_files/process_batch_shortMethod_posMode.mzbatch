@@ -1,11 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?><batch mzmine_version="4.7.8">
-    <batchstep method="io.github.mzmine.modules.batchmode.autosave.AutoSaveBatchModule" module_name="Save current batch" parameter_version="1">
-        <parameter name="Save batch to" selected="true">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\process_batch_shortMethod.mzbatch</current_file>
-        </parameter>
-    </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_cropfilter.CropFilterModule" module_name="Crop filter" parameter_version="1">
-        <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
+<?xml version="1.0" encoding="UTF-8"?><batch mzmine_version="4.5.20">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_cropfilter.CropFilterModule" parameter_version="1">
+        <parameter name="Raw data files" type="ALL_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
             <parameter name="Base Filtering Integer"/>
@@ -24,14 +19,14 @@
         <parameter name="Filter out empty scans">true</parameter>
         <parameter name="Remove source file after filtering">true</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.import_spectral_library.SpectralLibraryImportModule" module_name="Import spectral library" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.io.import_spectral_library.SpectralLibraryImportModule" parameter_version="1">
         <parameter name="Spectral library files">
             <file>I:\AISHEE_20231130\MSMS_processing\std_neg_normalizedToMax.mgf</file>
             <file>I:\AISHEE_20231130\MSMS_processing\std_pos_normalizedToMax.mgf</file>
             <file>I:\AISHEE_20231130\MSMS_processing\MassBank_BOKU_iBAM.mgf</file>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule" module_name="Mass detection" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule" parameter_version="1">
         <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
@@ -47,7 +42,7 @@
         <parameter name="Denormalize fragment scans (traps)">false</parameter>
         <parameter name="Mass detector" selected_item="Auto">
             <module name="Factor of lowest signal">
-                <parameter name="Noise factor">2.5</parameter>
+                <parameter name="Noise factor">5.0</parameter>
             </module>
             <module name="Auto">
                 <parameter name="Noise level">10000.0</parameter>
@@ -73,7 +68,7 @@
             </module>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule" module_name="Mass detection" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule" parameter_version="1">
         <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
@@ -89,7 +84,7 @@
         <parameter name="Denormalize fragment scans (traps)">false</parameter>
         <parameter name="Mass detector" selected_item="Auto">
             <module name="Factor of lowest signal">
-                <parameter name="Noise factor">2.5</parameter>
+                <parameter name="Noise factor">5.0</parameter>
             </module>
             <module name="Auto">
                 <parameter name="Noise level">100.0</parameter>
@@ -115,14 +110,14 @@
             </module>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule" module_name="Chromatogram builder" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule" parameter_version="1">
         <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
             <parameter name="Base Filtering Integer"/>
             <parameter name="Retention time">
                 <min>0.5</min>
-                <max>12.0</max>
+                <max>13.0</max>
             </parameter>
             <parameter name="Mobility"/>
             <parameter name="MS level filter" selected="MS1, level = 1">1</parameter>
@@ -132,15 +127,15 @@
         </parameter>
         <parameter name="Minimum consecutive scans">3</parameter>
         <parameter name="Minimum intensity for consecutive scans">10000.0</parameter>
-        <parameter name="Minimum absolute height">10000.0</parameter>
+        <parameter name="Minimum absolute height">50000.0</parameter>
         <parameter name="m/z tolerance (scan-to-scan)">
             <absolutetolerance>0.005</absolutetolerance>
-            <ppmtolerance>10.0</ppmtolerance>
+            <ppmtolerance>5.0</ppmtolerance>
         </parameter>
         <parameter name="Suffix">eics</parameter>
         <parameter name="Allow single scan chromatograms"/>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_smoothing.SmoothingModule" module_name="Smoothing" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_smoothing.SmoothingModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Smoothing algorithm" selected_item="Savitzky Golay">
             <module name="Loess smoothing">
@@ -148,17 +143,17 @@
                 <parameter name="Mobility width (scans)" selected="false">5</parameter>
             </module>
             <module name="Savitzky Golay">
-                <parameter name="Retention time width (scans)" selected="true">5</parameter>
-                <parameter name="Mobility width (scans)" selected="false">5</parameter>
+                <parameter name="Retention time smoothing" selected="false">5</parameter>
+                <parameter name="Mobility smoothing" selected="false">5</parameter>
             </module>
         </parameter>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
         <parameter name="Suffix">sm</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule" module_name="Local minimum feature resolver" parameter_version="2">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule" parameter_version="2">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Suffix">r</parameter>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
         <parameter name="MS/MS scan pairing" selected="true">
             <parameter name="MS1 to MS2 precursor tolerance (m/z)">
                 <absolutetolerance>0.01</absolutetolerance>
@@ -173,27 +168,26 @@
             <parameter name="Advanced" selected="false">
                 <parameter name="Minimum signal intensity (absolute, TIMS)" selected="false">250.0</parameter>
                 <parameter name="Minimum signal intensity (relative, TIMS)" selected="false">0.01</parameter>
-                <parameter name="Group iterative MS2s" selected="false">mainQuantFile</parameter>
             </parameter>
         </parameter>
         <parameter name="Dimension">Retention time</parameter>
         <parameter name="Chromatographic threshold">0.7390000000000001</parameter>
         <parameter name="Minimum search range RT/Mobility (absolute)">0.1</parameter>
         <parameter name="Minimum relative height">0.0</parameter>
-        <parameter name="Minimum absolute height">50000.0</parameter>
-        <parameter name="Min ratio of peak top/edge">1.0</parameter>
+        <parameter name="Minimum absolute height">100000.0</parameter>
+        <parameter name="Min ratio of peak top/edge">5.0</parameter>
         <parameter name="Peak duration range (min/mobility)">
             <min>0.1</min>
             <max>3.01</max>
         </parameter>
         <parameter name="Minimum scans (data points)">3</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule" module_name="13C isotope filter (formerly: isotope grouper)" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Name suffix">deiso</parameter>
         <parameter name="m/z tolerance (intra-sample)">
             <absolutetolerance>0.0015</absolutetolerance>
-            <ppmtolerance>3.0</ppmtolerance>
+            <ppmtolerance>5.0</ppmtolerance>
         </parameter>
         <parameter name="Retention time tolerance" unit="MINUTES">0.08</parameter>
         <parameter name="Mobility tolerance" selected="false">1.0</parameter>
@@ -201,27 +195,27 @@
         <parameter name="Maximum charge">2</parameter>
         <parameter name="Representative isotope">Most intense</parameter>
         <parameter name="Never remove feature with MS2">true</parameter>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_isotopefinder.IsotopeFinderModule" module_name="Isotopic peaks finder" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_isotopefinder.IsotopeFinderModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Chemical elements">H,C,N,O,S</parameter>
         <parameter name="m/z tolerance (feature-to-scan)">
             <absolutetolerance>0.0015</absolutetolerance>
-            <ppmtolerance>3.0</ppmtolerance>
+            <ppmtolerance>5.0</ppmtolerance>
         </parameter>
         <parameter name="Maximum charge of isotope m/z">1</parameter>
         <parameter name="Search in scans">SINGLE MOST INTENSE</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.align_join.JoinAlignerModule" module_name="Join aligner" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.align_join.JoinAlignerModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Feature list name">Aligned feature list</parameter>
         <parameter name="m/z tolerance (sample-to-sample)">
             <absolutetolerance>0.004</absolutetolerance>
-            <ppmtolerance>8.0</ppmtolerance>
+            <ppmtolerance>10.0</ppmtolerance>
         </parameter>
         <parameter name="Weight for m/z">3.0</parameter>
-        <parameter name="Retention time tolerance" unit="MINUTES">0.04</parameter>
+        <parameter name="Retention time tolerance" unit="MINUTES">0.05</parameter>
         <parameter name="Weight for RT">1.0</parameter>
         <parameter name="Mobility tolerance" selected="false">1.0</parameter>
         <parameter name="Mobility weight">1.0</parameter>
@@ -254,13 +248,13 @@
                 </module>
             </parameter>
         </parameter>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule" module_name="Feature list rows filter" parameter_version="2">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule" parameter_version="2">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Name suffix">peak</parameter>
         <parameter name="Minimum aligned features (samples)" selected="true">
-            <abs>1</abs>
+            <abs>3</abs>
             <rel>0.0</rel>
         </parameter>
         <parameter name="Minimum features in an isotope pattern" selected="false">2</parameter>
@@ -288,8 +282,8 @@
             <max>3.0</max>
         </parameter>
         <parameter name="Chromatographic FWHM" selected="true">
-            <min>0.15</min>
-            <max>0.35</max>
+            <min>0.01</min>
+            <max>0.4</max>
         </parameter>
         <parameter name="Charge" selected="false">
             <min>1</min>
@@ -306,24 +300,19 @@
             <parameter name="Divisor">1</parameter>
             <parameter name="Use Remainder of Kendrick mass">false</parameter>
         </parameter>
+        <parameter name="Parameter">No parameters defined</parameter>
         <parameter name="Only identified?">false</parameter>
         <parameter name="Text in identity" selected="false">target</parameter>
         <parameter name="Text in comment" selected="false">target</parameter>
-        <parameter name="RSD filter" selected="false">
-            <parameter column="mzmine_sample_type" group="qc" name="Sample grouping"/>
-            <parameter name="Maximum RSD">0.2</parameter>
-            <parameter name="Abundance measure">Area</parameter>
-            <parameter name="Keep undetected">false</parameter>
-        </parameter>
         <parameter name="Keep or remove rows">Keep rows that match all criteria</parameter>
-        <parameter name="Feature with MS2 scan">true</parameter>
+        <parameter name="Feature with MS2 scan">false</parameter>
         <parameter name="Never remove feature with MS2">false</parameter>
         <parameter name="Never remove annotated rows">false</parameter>
         <parameter name="Reset the feature number ID">false</parameter>
         <parameter name="Mass defect" selected="false"/>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule" module_name="Feature finder (multithreaded)" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Name suffix">gaps</parameter>
         <parameter name="Intensity tolerance">0.2</parameter>
@@ -333,22 +322,37 @@
         </parameter>
         <parameter name="Retention time tolerance" unit="MINUTES">0.01</parameter>
         <parameter name="Minimum scans (data points)">1</parameter>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_duplicatefilter.DuplicateFilterModule" module_name="Duplicate peak filter" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_duplicatefilter.DuplicateFilterModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Name suffix">dup</parameter>
         <parameter name="Filter mode">NEW AVERAGE</parameter>
         <parameter name="m/z tolerance">
             <absolutetolerance>8.0E-4</absolutetolerance>
-            <ppmtolerance>5.0</ppmtolerance>
+            <ppmtolerance>10.0</ppmtolerance>
         </parameter>
         <parameter name="RT tolerance" unit="MINUTES">0.05</parameter>
         <parameter name="Mobility tolerance" selected="false">1.0</parameter>
         <parameter name="Require same identification">false</parameter>
-        <parameter name="Original feature list">REMOVE</parameter>
+        <parameter name="Original feature list">KEEP</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.PrecursorPurityCheckerModule" module_name="Precursor purity checker (purity)" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.filter_blanksubtraction.FeatureListBlankSubtractionModule" parameter_version="1">
+        <parameter name="Aligned feature list" type="BATCH_LAST_FEATURELISTS">
+            <name_pattern>Blank|blank</name_pattern>
+        </parameter>
+        <parameter name="Blank/Control raw data files" type="NAME_PATTERN">
+            <name_pattern>*Blank*</name_pattern>
+        </parameter>
+        <parameter name="Minimum # of detection in blanks">2</parameter>
+        <parameter name="Quantification">Height</parameter>
+        <parameter name="Ratio type">MAXIMUM</parameter>
+        <parameter name="Fold change increase" selected="true">10.0</parameter>
+        <parameter name="Keep or remove features (of rows) below fold change">REMOVE - Only keep features above fold change</parameter>
+        <parameter name="Create secondary list of subtracted features">false</parameter>
+        <parameter name="Suffix">subtracted</parameter>
+    </batchstep>
+    <batchstep method="io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.PrecursorPurityCheckerModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Target ion m/z tolerance">
             <absolutetolerance>0.005</absolutetolerance>
@@ -360,7 +364,7 @@
         </parameter>
         <parameter name="Minimum precursor purity (%)">0.75</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataanalysis.feat_ms2_similarity_intra.IntraFeatureRowMs2SimilarityModule" module_name="Score intra-row purity by MS2 similarity" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataanalysis.feat_ms2_similarity_intra.IntraFeatureRowMs2SimilarityModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Export to file" selected="false"/>
         <parameter name="m/z tolerance (MS2)">
@@ -376,7 +380,7 @@
         </parameter>
         <parameter name="Split by collision energy">true</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule" module_name="Correlation grouping (metaCorrelate)" parameter_version="3">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule" parameter_version="3">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="RT tolerance" unit="MINUTES">0.06</parameter>
         <parameter name="Minimum feature height">0.0</parameter>
@@ -412,7 +416,7 @@
             <parameter name="Simplify for ≥ samples">250</parameter>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule" module_name="Ion identity networking" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="m/z tolerance (intra-sample)">
             <absolutetolerance>0.005</absolutetolerance>
@@ -512,7 +516,7 @@
             <parameter name="Delete rows witout ion id">false</parameter>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.group_spectral_networking.MainSpectralNetworkingModule" module_name="Spectral / Molecular Networking" parameter_version="2">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.group_spectral_networking.MainSpectralNetworkingModule" parameter_version="2">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Algorithm" selected_item="Modified cosine">
             <module name="Modified cosine">
@@ -631,7 +635,7 @@
             </module>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule" module_name="Spectral library search" parameter_version="3">
+    <batchstep method="io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule" parameter_version="3">
         <parameter name="Spectral libraries" type="ALL_IMPORTED"/>
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Merge &amp; select fragment scans" selected_item="simple_merged">
@@ -682,8 +686,6 @@
         </parameter>
         <parameter name="Advanced" selected="true">
             <parameter name="Retention time tolerance" selected="true" unit="MINUTES">0.2</parameter>
-            <parameter name="Retention index tolerance" selected="false"/>
-            <parameter name="Skip library entries without RIs">false</parameter>
             <parameter name="CCS tolerance [%]" selected="false">0.05</parameter>
             <parameter name="13C deisotoping" selected="false">
                 <parameter name="m/z tolerance">
@@ -697,32 +699,32 @@
             <parameter name="Crop spectra to m/z overlap">false</parameter>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_network_graphml.NetworkGraphMlExportModule" module_name="Export spectral networks to graphml (FBMN/IIMN)" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.io.export_network_graphml.NetworkGraphMlExportModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\processing__networks</current_file>
+            <current_file>C:\output\processing__networks</current_file>
         </parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataExportModule" module_name="Project metadata export" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataExportModule" parameter_version="1">
         <parameter name="Metadata file">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\processing__metadata</current_file>
+            <current_file>C:\output\processing__metadata</current_file>
         </parameter>
         <parameter name="Format">Default</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_features_csv.CSVExportModularModule" module_name="Export to CSV file (modular)" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.io.export_features_csv.CSVExportModularModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\processing__full_feature_table</current_file>
+            <current_file>C:\output\processing__full_feature_table</current_file>
         </parameter>
         <parameter name="Field separator">,</parameter>
         <parameter name="Identification separator">;</parameter>
         <parameter name="Remove empty columns">true</parameter>
         <parameter name="Filter rows">ALL</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule" module_name="Export molecular networking files (e.g., GNPS, FBMN, IIMN, MetGem)" parameter_version="3">
+    <batchstep method="io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule" parameter_version="3">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\processing__iimn_fbmn</current_file>
+            <current_file>C:\output\processing__iimn_fbmn</current_file>
         </parameter>
         <parameter name="Filter rows">MS2 OR ION IDENTITY</parameter>
         <parameter name="Merge &amp; select fragment scans" selected_item="preset_merged">
@@ -763,10 +765,10 @@
         </parameter>
         <parameter name="Open folder">false</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule" module_name="Export for SIRIUS" parameter_version="2">
+    <batchstep method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule" parameter_version="2">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\processing__sirius</current_file>
+            <current_file>C:\output\processing__sirius</current_file>
         </parameter>
         <parameter name="Intensity normalization" scientific="true">no_normalization</parameter>
         <parameter name="Merge &amp; select fragment scans" selected_item="preset_merged">
@@ -812,23 +814,23 @@
         <parameter name="Exclude multiple charge">false</parameter>
         <parameter name="Exclude multimers">false</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_compoundAnnotations_csv.CompoundAnnotationsCSVExportModule" module_name="Export all annotations to CSV file" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.io.export_compoundAnnotations_csv.CompoundAnnotationsCSVExportModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\processing__annotations.csv</current_file>
+            <current_file>C:\output\processing__annotations.csv</current_file>
         </parameter>
         <parameter name="Top N per method">10</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_features_featureML.FeatureMLExportModularModule" module_name="Export to featureML file" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.io.export_features_featureML.FeatureMLExportModularModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\features.featureML</current_file>
+            <current_file>C:\output\features.featureML</current_file>
         </parameter>
         <parameter name="Filter rows">ALL</parameter>
     </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule" module_name="Save project as" parameter_version="1">
+    <batchstep method="io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule" parameter_version="1">
         <parameter name="Project file">
-            <current_file>I:\Tomas_PrenylatedCompounds\analysis\mzmine_project.mzmine</current_file>
+            <current_file>C:\output\mzmine_project.mzmine</current_file>
         </parameter>
         <parameter name="Project type">Referencing (small)</parameter>
     </batchstep>
