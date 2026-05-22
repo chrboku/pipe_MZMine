@@ -143,6 +143,14 @@ function Process {
 
         # Process with MZmine
         & $MZMINE -b "$PROCESSBATCHFILE" -i "$INPUTFILESFILE" -o "$WDIR\$OUTDIR\${Task}_" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
+
+        # Test if the necessary output file was generated, if not, stop the script with an error message
+        if (!(Test-Path "$WDIR\$OUTDIR\${Task}__full_feature_table.csv")) {
+            Write-Host "Error: MZmine processing for $Task did not generate the expected output file ${Task}__full_feature_table.csv. Please check the MZmine log file ${Task}.1_MZmine_log.txt for details." -ForegroundColor Red
+            Write-Host "Press any key to exit..."
+            [void][System.Console]::ReadKey($true)
+            exit 1
+        }
         
         # Rename mzmine project and annotations file
         if (Test-Path "$WDIR\$OUTDIR\${Task}_") {
