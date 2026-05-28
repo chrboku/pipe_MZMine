@@ -18,20 +18,83 @@ $ARCHIVERESULTS = 0
 
 ## Define tasks as a dictionary with additional information
 $TaskParams = @{
-    "data_pos" =  @{
-	"MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
-	"polarity" = "positive"; 
-	"input_files" = "..\input_MS1_pos.txt"
+    "data_AndropogonGeradii_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_AndropogonGeradii_pos.txt"
     };
-    "data_neg" =  @{
-	"MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
-	"polarity" = "negative"; 
-	"input_files" = "..\input_MS1_neg.txt"
+    "data_CichoriumIntybus_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_CichoriumIntybus_pos.txt"
+    };
+    "data_Leeks_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_Leeks_pos.txt"
+    };
+    "data_Maize_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_Maize_pos.txt"
+    };
+    "data_SorghumBicolor_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_SorghumBicolor_pos.txt"
+    };
+    "data_SunflowerHelianthus_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_SunflowerHelianthus_pos.txt"
+    };
+    "data_terra_pos" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_posMode.mzbatch"; 
+        "polarity" = "positive"; 
+        "input_files" = "..\input_MS1_terra_pos.txt"
+    };
+
+
+    "data_AndropogonGeradii_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_AndropogonGeradii_neg.txt"
+    };
+    "data_CichoriumIntybus_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_CichoriumIntybus_neg.txt"
+    };
+    "data_Leeks_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_Leeks_neg.txt"
+    };
+    "data_Maize_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_Maize_neg.txt"
+    };
+    "data_SorghumBicolor_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_SorghumBicolor_neg.txt"
+    };
+    "data_SunflowerHelianthus_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_SunflowerHelianthus_neg.txt"
+    };
+    "data_terra_neg" =  @{
+        "MZmine_batch" = "mzmine_batch_files/process_batch_shortMethod_negMode.mzbatch"; 
+        "polarity" = "negative"; 
+        "input_files" = "..\input_MS1_terra_neg.txt"
     };
 }
 # Default tasks to be processed
 $Tasks = ($TaskParams.Keys | Sort-Object | ForEach-Object { $_ }) -join ", "
 $Tasks = @("data_pos", "data_neg")
+$Tasks = $TaskParams.Keys -join ", "
 
 ## do not mofify unless expert
 $PROCESSBATCHFILE = "$WDIR\scripts\process_batch.mzbatch"
@@ -138,7 +201,6 @@ function Process {
         $INPUTFILESFILE = $TaskParams[$Task].input_files
         Write-Host "   .. using mzbatch file ${PROCESSBATCHFILE} to process $INPUTFILESFILE" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
         Copy-Item "$PROCESSBATCHFILE" "$WDIR\$OUTDIR\params_scripts_etc\"
-        Copy-Item "$FEATURERENAMESCRIPT" "$WDIR\$OUTDIR\params_scripts_etc\"
         Copy-Item "$INPUTFILESFILE" "$WDIR\$OUTDIR\params_scripts_etc\"
 
         # Process with MZmine
@@ -220,6 +282,7 @@ function Process {
         Write-Host "`n`n`n-----------------------------------------------------"
         Write-Host "$Task.1.7. Converting CSV files to TSV files" | Tee-Object -FilePath "$WDIR\$OUTDIR\${Task}.1_MZmine_log.txt" -Append
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table.tsv"
+        ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table2.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__full_feature_table2.tsv"
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_quant.tsv"
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__annotations.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__annotations.tsv"
         ConvertCsvToTsv -CsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_edges_msannotation.csv" -TsvFilePath "$WDIR\$OUTDIR\${Task}__iimn_fbmn_edges_msannotation.tsv"

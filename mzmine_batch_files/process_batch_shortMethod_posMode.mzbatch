@@ -250,6 +250,23 @@
         </parameter>
         <parameter name="Original feature list">KEEP</parameter>
     </batchstep>
+    <batchstep method="io.github.mzmine.modules.io.export_features_csv.CSVExportModularModule" parameter_version="1">
+        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
+        <parameter name="Filename">
+            <current_file>C:\output\processing__full_feature_table__IntermediateAfterJoining</current_file>
+        </parameter>
+        <parameter name="Field separator">,</parameter>
+        <parameter name="Identification separator">;</parameter>
+        <parameter name="Remove empty columns">true</parameter>
+        <parameter name="Filter rows">ALL</parameter>
+    </batchstep>
+    <batchstep method="io.github.mzmine.modules.io.export_features_featureML.FeatureMLExportModularModule" parameter_version="1">
+        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
+        <parameter name="Filename">
+            <current_file>C:\output\processing__full_feature_table__IntermediateAfterJoining.featureML</current_file>
+        </parameter>
+        <parameter name="Filter rows">ALL</parameter>
+    </batchstep>
     <batchstep method="io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule" parameter_version="2">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Name suffix">peak</parameter>
@@ -824,7 +841,7 @@
     <batchstep method="io.github.mzmine.modules.io.export_features_featureML.FeatureMLExportModularModule" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>C:\output\features.featureML</current_file>
+            <current_file>C:\output\processing__full_feature_table.featureML</current_file>
         </parameter>
         <parameter name="Filter rows">ALL</parameter>
     </batchstep>
