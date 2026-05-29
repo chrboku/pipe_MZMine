@@ -27,7 +27,7 @@
         </parameter>
     </batchstep>
     <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule" parameter_version="1">
-        <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
+        <parameter name="Raw data files" type="ALL_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
             <parameter name="Base Filtering Integer"/>
@@ -69,7 +69,7 @@
         </parameter>
     </batchstep>
     <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule" parameter_version="1">
-        <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
+        <parameter name="Raw data files" type="ALL_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
             <parameter name="Base Filtering Integer"/>
@@ -111,7 +111,7 @@
         </parameter>
     </batchstep>
     <batchstep method="io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule" parameter_version="1">
-        <parameter name="Raw data files" type="BATCH_LAST_FILES"/>
+        <parameter name="Raw data files" type="ALL_FILES"/>
         <parameter name="Scan filters" selected="true">
             <parameter name="Scan number"/>
             <parameter name="Base Filtering Integer"/>

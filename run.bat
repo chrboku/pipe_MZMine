@@ -1,2 +1,2 @@
-powershell.exe -executionpolicy unrestricted -file UntargetedMetabolomics_pipeline.ps1
+uv run scripts/pipeline.py
 pause
