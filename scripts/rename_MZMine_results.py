@@ -9,7 +9,6 @@ import re
 from bs4 import BeautifulSoup
 
 
-
 def parse_mgf_file(file_path):
     """
     Parses an MGF file and returns a dictionary containing the parsed data.
@@ -34,7 +33,7 @@ def parse_mgf_file(file_path):
         elif line == "END IONS":
             blocks.append(current_block)
             current_block = OrderedDict()
-        
+
         elif line.startswith("Num peaks"):
             if "___spectrumData" not in current_block:
                 current_block["___spectrumData"] = []
@@ -43,13 +42,14 @@ def parse_mgf_file(file_path):
         elif "=" in line:
             key, value = line.split("=", 1)
             current_block[key.strip()] = value.strip()
-        
+
         else:
             if "___spectrumData" not in current_block:
                 current_block["___spectrumData"] = []
             current_block["___spectrumData"].append(line)
 
     return blocks
+
 
 def export_mgf_file(blocks, output_file_path):
     """
@@ -70,15 +70,25 @@ def export_mgf_file(blocks, output_file_path):
                     file.write(f"{line}\n")
             file.write("END IONS\n\n")
 
-                
 
-parser = argparse.ArgumentParser(description='Process feature table, quantification table, graphml and MGF files.')
-parser.add_argument('--full_feature_table', type=str, help='Path to the full feature table CSV file')
-parser.add_argument('--annotations', type=str, help='Path to the annotations CSV file')
-parser.add_argument('--iimn_fbmn_quant', type=str, help='Path to the IIMN FBMN quantification CSV file')
-parser.add_argument('--graphml', type=str, help='Path to the graphml file')
-parser.add_argument('--mgf', type=str, nargs='+', help='Path to one or more MGF files')
-parser.add_argument('--file_suffix', type=str, help='Suffix to add to the output file names.  If not specified, will overwrite the existing files', default="")
+parser = argparse.ArgumentParser(
+    description="Process feature table, quantification table, graphml and MGF files."
+)
+parser.add_argument(
+    "--full_feature_table", type=str, help="Path to the full feature table CSV file"
+)
+parser.add_argument("--annotations", type=str, help="Path to the annotations CSV file")
+parser.add_argument(
+    "--iimn_fbmn_quant", type=str, help="Path to the IIMN FBMN quantification CSV file"
+)
+parser.add_argument("--graphml", type=str, help="Path to the graphml file")
+parser.add_argument("--mgf", type=str, nargs="+", help="Path to one or more MGF files")
+parser.add_argument(
+    "--file_suffix",
+    type=str,
+    help="Suffix to add to the output file names.  If not specified, will overwrite the existing files",
+    default="",
+)
 
 args = parser.parse_args()
 
@@ -97,13 +107,23 @@ print(f"  - MGFs: {mgfs}")
 
 
 # Read the full feature table CSV file
-full_feature_table_df = pl.read_csv(full_feature_table, separator=",", has_header=True, infer_schema_length=None)
+full_feature_table_df = pl.read_csv(
+    full_feature_table, separator=",", has_header=True, infer_schema_length=None
+)
 
 # Read the annotations CSV file
-df_annotations = pl.read_csv(args.annotations, separator=",", has_header=True, infer_schema_length=None)
+df_annotations = pl.read_csv(
+    args.annotations, separator=",", has_header=True, infer_schema_length=None
+)
 
 # Read the IIMN FBMN quantification CSV file
-iimn_fbmn_quant_df = pl.read_csv(iimn_fbmn_quant, separator=",", has_header=True, truncate_ragged_lines=True, infer_schema_length=None)
+iimn_fbmn_quant_df = pl.read_csv(
+    iimn_fbmn_quant,
+    separator=",",
+    has_header=True,
+    truncate_ragged_lines=True,
+    infer_schema_length=None,
+)
 
 mgfs_data = {}
 for mgf in mgfs:
@@ -113,9 +133,15 @@ print("\nNumber of features:", len(full_feature_table_df))
 
 ## generate the new IDs and the ID mapping
 IDmapping = {}
+
+
 def makeSafe(name):
-    name = re.sub(r'[^a-zA-Z0-9_\\-\\.]', '_', name)  # Replace non-alphanumeric characters with underscores
+    name = re.sub(
+        r"[^a-zA-Z0-9_\\-\\.]", "_", name
+    )  # Replace non-alphanumeric characters with underscores
     return name
+
+
 def makeAdd(row):
     add = f"__mz{row['mz'][0]}__rt{row['rt'][0]}"
     if "compound_db_identity:compound_name" in row.columns:
@@ -123,30 +149,37 @@ def makeAdd(row):
         if name is not None and name != "":
             add = add + "__" + str(name)
     return makeSafe(add)
+
+
 for i in range(len(full_feature_table_df)):
     add = ""
     id = full_feature_table_df["id"][i]
     add = makeAdd(full_feature_table_df[i])
-    #if add is not None and add != "":
+    # if add is not None and add != "":
     #    print(f"   - {id}, renaming to {id}{add}")
-    #else:
+    # else:
     #    print(f"   - {id}, not adding anything")
 
     IDmapping[full_feature_table_df["id"][i]] = add
 
 # Update the 'id' column in the full_feature_table_df
 full_feature_table_df = full_feature_table_df.with_columns(
-    pl.col("id").cast(pl.Utf8) + pl.col("id").map_elements(lambda id: IDmapping.get(id, ""), return_dtype=pl.Utf8)
+    pl.col("id").cast(pl.Utf8)
+    + pl.col("id").map_elements(lambda id: IDmapping.get(id, ""), return_dtype=pl.Utf8)
 )
 
 # Update the 'id' column in the iimn_fbmn_quant_df
 iimn_fbmn_quant_df = iimn_fbmn_quant_df.with_columns(
-    pl.col("row ID").cast(pl.Utf8) + pl.col("row ID").map_elements(lambda id: IDmapping.get(id, ""), return_dtype=pl.Utf8)
+    pl.col("row ID").cast(pl.Utf8)
+    + pl.col("row ID").map_elements(
+        lambda id: IDmapping.get(id, ""), return_dtype=pl.Utf8
+    )
 )
 
 # Update the 'id' column in the df_annotations
 df_annotations = df_annotations.with_columns(
-    pl.col("id").cast(pl.Utf8) + pl.col("id").map_elements(lambda id: IDmapping.get(id, ""), return_dtype=pl.Utf8)
+    pl.col("id").cast(pl.Utf8)
+    + pl.col("id").map_elements(lambda id: IDmapping.get(id, ""), return_dtype=pl.Utf8)
 )
 
 # Update the FEATURE_ID in the MGF files
@@ -160,10 +193,12 @@ for mgf, blocks in mgfs_data.items():
                 feature_id = block["FEATURE_ID"]
             add = IDmapping.get(feature_id, "")
             block["FEATURE_ID"] = str(feature_id) + add
-            #print(f"Updated FEATURE_ID: {block['FEATURE_ID']}")
+            # print(f"Updated FEATURE_ID: {block['FEATURE_ID']}")
 
 # Export the updated DataFrames to CSV files
-output_full_feature_table_path = full_feature_table.replace(".csv", f"{file_suffix}.csv")
+output_full_feature_table_path = full_feature_table.replace(
+    ".csv", f"{file_suffix}.csv"
+)
 full_feature_table_df.write_csv(output_full_feature_table_path)
 print(f"Exported updated Full Feature Table to {output_full_feature_table_path}")
 
@@ -183,11 +218,11 @@ for mgf, blocks in mgfs_data.items():
 
 # Parse the graphml file
 with open(graphml, "r") as file:
-    soup = BeautifulSoup(file, 'xml')
+    soup = BeautifulSoup(file, "xml")
 
 # Update the node IDs in the graphml file
-for node in soup.find_all('node'):
-    node_id = node['id']
+for node in soup.find_all("node"):
+    node_id = node["id"]
     try:
         node_id = int(node_id)
     except ValueError:
@@ -195,12 +230,12 @@ for node in soup.find_all('node'):
     add = IDmapping.get(node_id, "")
     if add != "":
         new_node_id = str(node_id) + add
-        node['id'] = new_node_id
+        node["id"] = new_node_id
 
 # Update the target and source attributes in the edges
-for edge in soup.find_all('edge'):
-    source = edge['source']
-    target = edge['target']
+for edge in soup.find_all("edge"):
+    source = edge["source"]
+    target = edge["target"]
     try:
         source = int(source)
     except ValueError:
@@ -212,13 +247,19 @@ for edge in soup.find_all('edge'):
     add_source = IDmapping.get(source, "")
     add_target = IDmapping.get(target, "")
     if add_source != "":
-        edge['source'] = str(source) + add_source
+        edge["source"] = str(source) + add_source
     if add_target != "":
-        edge['target'] = str(target) + add_target
+        edge["target"] = str(target) + add_target
 
 # Write the updated graphml to a new file
 output_graphml_path = graphml.replace(".graphml", f"{file_suffix}.graphml")
 with open(output_graphml_path, "w") as file:
-    file.write(re.sub("<binary>\\s*(.*)\\s*</binary>", "<binary>\\1</binary>", soup.prettify().replace("\r", "")))
+    file.write(
+        re.sub(
+            "<binary>\\s*(.*)\\s*</binary>",
+            "<binary>\\1</binary>",
+            soup.prettify().replace("\r", ""),
+        )
+    )
 
 print(f"Exported updated GraphML to {output_graphml_path}")

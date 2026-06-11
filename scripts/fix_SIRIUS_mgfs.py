@@ -34,7 +34,7 @@ def parse_mgf_file(file_path):
                 raise ValueError("No FEATURE_ID found in the block.")
             current_block = OrderedDict()
             current_feature_id = None
-        
+
         elif line.startswith("Num peaks"):
             if "spectrumData" not in current_block:
                 current_block["spectrumData"] = []
@@ -45,13 +45,14 @@ def parse_mgf_file(file_path):
             if key == "FEATURE_ID":
                 current_feature_id = value.strip()
             current_block[key.strip()] = value.strip()
-        
+
         else:
             if "spectrumData" not in current_block:
                 current_block["spectrumData"] = []
             current_block["spectrumData"].append(line)
 
     return blocks
+
 
 def export_mgf_file(blocks, output_file_path):
     """
@@ -77,7 +78,9 @@ def export_mgf_file(blocks, output_file_path):
 def main():
     parser = argparse.ArgumentParser(description="Process an MGF file.")
     parser.add_argument("--mgf_file", type=str, help="Path to the MGF file")
-    parser.add_argument("--mgf_outputfile", type=str, help="Path to the MGF file", default="::SAME")
+    parser.add_argument(
+        "--mgf_outputfile", type=str, help="Path to the MGF file", default="::SAME"
+    )
     args = parser.parse_args()
 
     print(f"Processing MGF file: {args.mgf_file}")
@@ -94,19 +97,21 @@ def main():
     for feature_id, feature_blocks in blocks.items():
         ms1_blocks = [block for block in feature_blocks if block.get("MSLEVEL") == "1"]
         ms2_blocks = [block for block in feature_blocks if block.get("MSLEVEL") == "2"]
-        print(f"Feature ID: {feature_id}, MS1 spectra: {len(ms1_blocks)}, MS2 spectra: {len(ms2_blocks)}")
+        print(
+            f"Feature ID: {feature_id}, MS1 spectra: {len(ms1_blocks)}, MS2 spectra: {len(ms2_blocks)}"
+        )
 
-        assert(len(ms1_blocks) <= 1)
+        assert len(ms1_blocks) <= 1
 
         for ms2_block in ms2_blocks:
             ms2_block = ms2_block.copy()
 
             # Check if the FEATURE_ID starts with a number followed by two underscores
-            x = ms2_block['FEATURE_ID']
+            x = ms2_block["FEATURE_ID"]
             if re.match(r"^\d+__", x):
                 x = f"{unique_id_counter}_{ms2_block['FEATURE_ID']}"
                 print(f"   .. updating FEATURE_ID to {x}")
-                ms2_block['FEATURE_ID'] = x
+                ms2_block["FEATURE_ID"] = x
             else:
                 print(f"   .. not updating as it seems already fixed: {x}")
 
@@ -125,6 +130,7 @@ def main():
         output_file_path = args.mgf_file
     export_mgf_file(new_blocks, output_file_path)
     print(f"   .. Exported new MGF file to: {output_file_path}")
+
 
 if __name__ == "__main__":
     main()

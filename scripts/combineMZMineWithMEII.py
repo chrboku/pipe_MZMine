@@ -63,10 +63,14 @@ def save_as_pdf_pages(
                 with p9._utils.context.plot_context(plot).rc_context:
                     # Save as a page in the PDF file
                     pdf.savefig(fig, **fig_kwargs)
-            elif isinstance(plot, plt.Figure) or isinstance(plot, matplotlib.table.Table):
+            elif isinstance(plot, plt.Figure) or isinstance(
+                plot, matplotlib.table.Table
+            ):
                 pdf.savefig(plot)
             else:
-                raise TypeError(f"Unsupported type {type(plot)}. Must be ggplot or Figure.")
+                raise TypeError(
+                    f"Unsupported type {type(plot)}. Must be ggplot or Figure."
+                )
 
 
 def parse_mgf_file(file_path):
@@ -265,7 +269,7 @@ def import_file(file_path):
             df = pl.read_csv(
                 file_path,
                 separator=sep,
-                #encoding=encoding,
+                # encoding=encoding,
                 comment_prefix="#",
                 infer_schema=True,
                 infer_schema_length=10000,
@@ -278,7 +282,9 @@ def import_file(file_path):
     raise ValueError(f"Failed to determine separator for file: {file_path}")
 
 
-def extract_standardized_columns(df, id_column, mz_column, rt_column, rt_unit, ionMode_column=None, xn_column=None):
+def extract_standardized_columns(
+    df, id_column, mz_column, rt_column, rt_unit, ionMode_column=None, xn_column=None
+):
     """
     Extracts and standardizes the ID, MZ, and RT columns from a DataFrame.
     Converts RT to minutes if necessary.
@@ -310,10 +316,15 @@ def extract_standardized_columns(df, id_column, mz_column, rt_column, rt_unit, i
             result = pl.concat([result, x], how="horizontal")
         # Convert MZ and RT columns to numeric values
         result = result.with_columns(
-            [pl.col("MZ").cast(str).str.strip_chars().cast(pl.Float64), pl.col("RT").cast(str).str.strip_chars().cast(pl.Float64)]
+            [
+                pl.col("MZ").cast(str).str.strip_chars().cast(pl.Float64),
+                pl.col("RT").cast(str).str.strip_chars().cast(pl.Float64),
+            ]
         )
     except Exception as e:
-        print(f"Error: Could not find one or more columns: {id_column}, {mz_column}, {rt_column}")
+        print(
+            f"Error: Could not find one or more columns: {id_column}, {mz_column}, {rt_column}"
+        )
         print("Available columns:", df.columns)
         print("Error message:", e)
         traceback.print_exc()
@@ -364,7 +375,11 @@ def find_mapping(
     que_mz = query_df["MZ"].to_numpy()
     que_rt = query_df["RT"].to_numpy()
 
-    print(ca.Fore.BLUE + f"Finding matches for {len(que_id)} query features against {len(ref_id)} reference features..." + ca.Style.RESET_ALL)
+    print(
+        ca.Fore.BLUE
+        + f"Finding matches for {len(que_id)} query features against {len(ref_id)} reference features..."
+        + ca.Style.RESET_ALL
+    )
 
     mappings = []
 
@@ -382,18 +397,26 @@ def find_mapping(
         rt_diff = ref_rt - rt
 
         # Mask for candidates within tolerances
-        mask = np.where((np.abs(ppm_diff) <= max_mz_difference_ppm) & (np.abs(rt_diff) <= max_rt_difference_min))[0]
+        mask = np.where(
+            (np.abs(ppm_diff) <= max_mz_difference_ppm)
+            & (np.abs(rt_diff) <= max_rt_difference_min)
+        )[0]
         if len(mask) < 1:
             no_matches += 1
 
             continue
 
         # Compute score for candidates
-        score = (np.abs(ppm_diff[mask]) / weight_mz) ** 2 + (np.abs(rt_diff[mask]) / weight_rt) ** 2
+        score = (np.abs(ppm_diff[mask]) / weight_mz) ** 2 + (
+            np.abs(rt_diff[mask]) / weight_rt
+        ) ** 2
         if len(score) > 1:
             ## TODO implement fix for inconclusive matches
             non_unique_matches += 1
-            print(ca.Fore.YELLOW + f"   - WARNING: Found {len(mask)} candidates for query {qid} (mz: {que_mz[i]}, rt: {que_rt[i]} min), these are:")
+            print(
+                ca.Fore.YELLOW
+                + f"   - WARNING: Found {len(mask)} candidates for query {qid} (mz: {que_mz[i]}, rt: {que_rt[i]} min), these are:"
+            )
             for j in range(len(mask)):
                 print(
                     f"     . Num {ref_id[mask[j]]} (mz: {ref_mz[mask[j]]:.4f}, rt: {ref_rt[mask[j]]:.2f} min, IonMode: {ref_ionMode[mask[j]]}, Xn: {ref_Xn[mask[j]]})"
@@ -404,13 +427,18 @@ def find_mapping(
             max_ppm = np.max(ppm_diff[mask])
             max_rt = np.max(rt_diff[mask])
             if max_ppm - min_ppm <= 1 and max_rt - min_rt <= 0.02:
-                print(ca.Fore.YELLOW + "     - MZ and RTs of matched are similar, selecting the one with the highest Xn count")
+                print(
+                    ca.Fore.YELLOW
+                    + "     - MZ and RTs of matched are similar, selecting the one with the highest Xn count"
+                )
 
                 # Select the match with the highest Xn count
                 mask = np.array([mask[np.argmax(ref_Xn[mask])]])
 
                 # Update mask and score to reflect the selected match
-                score = (np.abs(ppm_diff[mask]) / weight_mz) ** 2 + (np.abs(rt_diff[mask]) / weight_rt) ** 2
+                score = (np.abs(ppm_diff[mask]) / weight_mz) ** 2 + (
+                    np.abs(rt_diff[mask]) / weight_rt
+                ) ** 2
                 print(
                     f"        -> Num {ref_id[mask[0]]} (mz: {ref_mz[mask[0]]:.4f}, rt: {ref_rt[mask[0]]:.2f} min, IonMode: {ref_ionMode[mask[0]]}, Xn: {ref_Xn[mask[0]]})"
                 )
@@ -436,15 +464,30 @@ def find_mapping(
                     "reference_rt": ref_rt[ref_idx],
                 }
             )
-            print(ca.Fore.GREEN + f'   - Mapped query {qid} (mz: {que_mz[i]}, rt: {que_rt[i]} min) to reference {ref_id[ref_idx]} (mz: {ref_mz[ref_idx]:.4f}, rt: {ref_rt[ref_idx]:.2f} min), ppm diff: {ppm_diff[ref_idx]:.2f} ppm, rt diff: {rt_diff[ref_idx]:.2f} min, score: {score[0]:.2f}' + ca.Style.RESET_ALL + "\n")
+            print(
+                ca.Fore.GREEN
+                + f"   - Mapped query {qid} (mz: {que_mz[i]}, rt: {que_rt[i]} min) to reference {ref_id[ref_idx]} (mz: {ref_mz[ref_idx]:.4f}, rt: {ref_rt[ref_idx]:.2f} min), ppm diff: {ppm_diff[ref_idx]:.2f} ppm, rt diff: {rt_diff[ref_idx]:.2f} min, score: {score[0]:.2f}"
+                + ca.Style.RESET_ALL
+                + "\n"
+            )
         else:
-            print(ca.Fore.RED + "     - Could not resolve ambiguity, ignoring query feature for now" + ca.Style.RESET_ALL + "\n")
+            print(
+                ca.Fore.RED
+                + "     - Could not resolve ambiguity, ignoring query feature for now"
+                + ca.Style.RESET_ALL
+                + "\n"
+            )
 
     # Print mapping summary
     print(f"   - Found {no_matches} features with no match in the reference")
-    print(f"   - Found {len(mappings)} matches between {query_df.shape[0]} compounds and {reference_df.shape[0]} reference features.")
+    print(
+        f"   - Found {len(mappings)} matches between {query_df.shape[0]} compounds and {reference_df.shape[0]} reference features."
+    )
     if non_unique_matches > 0:
-        print(ca.Fore.RED + f"   - WARNING: Found {non_unique_matches} queries with multiple matches.")
+        print(
+            ca.Fore.RED
+            + f"   - WARNING: Found {non_unique_matches} queries with multiple matches."
+        )
         if resolved_non_unique_matches > 0:
             print(
                 ca.Fore.YELLOW
@@ -460,10 +503,16 @@ def find_mapping(
 
     print("Reference ID counts:")
     remove_ids = []
-    for ref_id, count in sorted(reference_id_counts.items(), key=lambda x: x[1], reverse=True):
+    for ref_id, count in sorted(
+        reference_id_counts.items(), key=lambda x: x[1], reverse=True
+    ):
         if count > 1:
             remove_ids.append(ref_id)
-    print(ca.Fore.RED + f"Removing {len(remove_ids)} duplicate reference IDs..." + ca.Style.RESET_ALL)
+    print(
+        ca.Fore.RED
+        + f"Removing {len(remove_ids)} duplicate reference IDs..."
+        + ca.Style.RESET_ALL
+    )
     # Print the reference features that are in remove_ids
     for ref_id in remove_ids:
         print(
@@ -471,7 +520,9 @@ def find_mapping(
             + f"Reference ID {ref_id} is duplicated and will be removed. MZ: {reference_df.filter(pl.col('ID') == ref_id)['MZ'][0]}, RT: {reference_df.filter(pl.col('ID') == ref_id)['RT'][0]}"
             + ca.Style.RESET_ALL
         )
-    mappings = [mapping for mapping in mappings if mapping["reference_id"] not in remove_ids]
+    mappings = [
+        mapping for mapping in mappings if mapping["reference_id"] not in remove_ids
+    ]
 
     # Convert mappings to DataFrame for plotting
     mappings_df = pl.DataFrame(mappings)
@@ -487,10 +538,18 @@ def find_mapping(
         p = (
             p9.ggplot(mappings_df, p9.aes(x="rt_diff", y="ppm_diff"))
             + p9.geom_point(alpha=0.6)
-            + p9.geom_vline(xintercept=rt_median, color="red", linetype="dashed", alpha=0.7)
-            + p9.geom_vline(xintercept=rt_mean, color="blue", linetype="dashed", alpha=0.7)
-            + p9.geom_hline(yintercept=ppm_median, color="red", linetype="dashed", alpha=0.7)
-            + p9.geom_hline(yintercept=ppm_mean, color="blue", linetype="dashed", alpha=0.7)
+            + p9.geom_vline(
+                xintercept=rt_median, color="red", linetype="dashed", alpha=0.7
+            )
+            + p9.geom_vline(
+                xintercept=rt_mean, color="blue", linetype="dashed", alpha=0.7
+            )
+            + p9.geom_hline(
+                yintercept=ppm_median, color="red", linetype="dashed", alpha=0.7
+            )
+            + p9.geom_hline(
+                yintercept=ppm_mean, color="blue", linetype="dashed", alpha=0.7
+            )
             + p9.theme_bw()
             + p9.labs(
                 title="Matched Features: RT vs PPM Difference",
@@ -606,14 +665,34 @@ if __name__ == "__main__":
     if reference_df[ref_id].dtype == pl.Utf8:
         sample_values = reference_df[ref_id].head(10).to_list()
         if all(str(val).startswith("FP") for val in sample_values if val is not None):
-            print(f"   - Detected 'FP' prefix in {ref_id} column, removing prefix and converting to integer (e.g., FP1 -> 1).")
-            reference_df = reference_df.with_columns(pl.col(ref_id).str.extract(r"FP([0-9]*)", 1).cast(pl.Int64).alias(ref_id))
-        elif all(str(val).startswith("MET") for val in sample_values if val is not None):
-            print(f"   - Detected 'MET' prefix in {ref_id} column, removing prefix and converting to integer (e.g., MET1 -> 1).")
-            reference_df = reference_df.with_columns(pl.col(ref_id).str.extract(r"MET[0-9]*_FP([0-9]*)", 1).cast(pl.Int64).alias(ref_id))
+            print(
+                f"   - Detected 'FP' prefix in {ref_id} column, removing prefix and converting to integer (e.g., FP1 -> 1)."
+            )
+            reference_df = reference_df.with_columns(
+                pl.col(ref_id)
+                .str.extract(r"FP([0-9]*)", 1)
+                .cast(pl.Int64)
+                .alias(ref_id)
+            )
+        elif all(
+            str(val).startswith("MET") for val in sample_values if val is not None
+        ):
+            print(
+                f"   - Detected 'MET' prefix in {ref_id} column, removing prefix and converting to integer (e.g., MET1 -> 1)."
+            )
+            reference_df = reference_df.with_columns(
+                pl.col(ref_id)
+                .str.extract(r"MET[0-9]*_FP([0-9]*)", 1)
+                .cast(pl.Int64)
+                .alias(ref_id)
+            )
     if args.polarity is not None:
-        reference_df = reference_df.filter(pl.col("Ionisation_Mode") == ("+" if args.polarity == "positive" else "-"))
-        print(f"   - Filtered for polarity {args.polarity}, {reference_df.shape[0]} rows remaining.")
+        reference_df = reference_df.filter(
+            pl.col("Ionisation_Mode") == ("+" if args.polarity == "positive" else "-")
+        )
+        print(
+            f"   - Filtered for polarity {args.polarity}, {reference_df.shape[0]} rows remaining."
+        )
     reference_df_sta = extract_standardized_columns(
         reference_df,
         ref_id,
@@ -655,7 +734,12 @@ if __name__ == "__main__":
     print(f"   - Found {len(mappings_df)} mapped features.")
 
     # Update IDs in query_df_sta: for IDs found in mappings_df["query_id"], set to corresponding mappings_df["reference_id"]
-    mapping_dict = dict(zip([i for i in mappings_df["query_id"].to_list()], mappings_df["reference_id"].to_list()))
+    mapping_dict = dict(
+        zip(
+            [i for i in mappings_df["query_id"].to_list()],
+            mappings_df["reference_id"].to_list(),
+        )
+    )
 
     print("----------------------------------------------------------------\n")
 
@@ -663,12 +747,21 @@ if __name__ == "__main__":
     que_id_int_expr = pl.coalesce(
         [
             pl.col(que_id).cast(pl.Int64, strict=False),
-            pl.col(que_id).cast(pl.Utf8).str.extract(r"([0-9]+)$", 1).cast(pl.Int64, strict=False),
+            pl.col(que_id)
+            .cast(pl.Utf8)
+            .str.extract(r"([0-9]+)$", 1)
+            .cast(pl.Int64, strict=False),
         ]
     )
     # add old mzmine and metextract II id column
     query_df = query_df.with_columns(pl.col(que_id).alias("id_mzmine4"))
-    query_df = query_df.with_columns(pl.col(que_id).replace_strict(mapping_dict, default=None).cast(pl.Utf8).fill_null("").alias("id_metextractII"))
+    query_df = query_df.with_columns(
+        pl.col(que_id)
+        .replace_strict(mapping_dict, default=None)
+        .cast(pl.Utf8)
+        .fill_null("")
+        .alias("id_metextractII")
+    )
     # update id column: matched -> reference id as string, non-matched -> offset+original as string
     query_df = query_df.with_columns(
         pl.coalesce(
@@ -681,7 +774,7 @@ if __name__ == "__main__":
     # generate label column
     query_df = query_df.with_columns(
         (
-            "U" 
+            "U"
             + pl.col(que_id).cast(str)
             + "\n"
             + pl.col(que_rt).cast(pl.Float64).round(2).cast(str)
@@ -690,12 +783,18 @@ if __name__ == "__main__":
         ).alias("label")
     )
     # Reorder columns so all columns starting with 'id' (case-insensitive) are at the beginning
-    id_cols = [col for col in query_df.columns if col.lower().startswith("id") or col.lower() == "label"]
+    id_cols = [
+        col
+        for col in query_df.columns
+        if col.lower().startswith("id") or col.lower() == "label"
+    ]
     other_cols = [col for col in query_df.columns if col not in id_cols]
     query_df = query_df.select(id_cols + other_cols)
     # Write the updated DataFrame to a new file
     query_file_path = pathlib.Path(args.query_file)
-    query_file_path = query_file_path.with_name(query_file_path.stem + args.new_files_suffix + ".tsv")
+    query_file_path = query_file_path.with_name(
+        query_file_path.stem + args.new_files_suffix + ".tsv"
+    )
     query_df.write_csv(query_file_path, separator="\t")
     print(f"   - Updated query file saved as: {query_file_path}")
 
@@ -714,44 +813,69 @@ if __name__ == "__main__":
         if file.endswith(".tsv") or file.endswith(".txt") or file.endswith(".csv"):
             print("     table file detected.")
             additional_query_df = import_file(file)
-            print(f"     has {additional_query_df.shape[0]} rows and {additional_query_df.shape[1]} columns.")
-            additional_query_df = additional_query_df.with_columns(pl.col(que_id).alias("id_mzmine4"))
+            print(
+                f"     has {additional_query_df.shape[0]} rows and {additional_query_df.shape[1]} columns."
+            )
             additional_query_df = additional_query_df.with_columns(
-                pl.col(que_id).replace_strict(mapping_dict, default=None).cast(pl.Utf8).fill_null("").alias("id_metextractII")
+                pl.col(que_id).alias("id_mzmine4")
+            )
+            additional_query_df = additional_query_df.with_columns(
+                pl.col(que_id)
+                .replace_strict(mapping_dict, default=None)
+                .cast(pl.Utf8)
+                .fill_null("")
+                .alias("id_metextractII")
             )
             # update id column: matched -> reference id as string, non-matched -> offset+original as string
             additional_que_id_int_expr = pl.coalesce(
                 [
                     pl.col(que_id).cast(pl.Int64, strict=False),
-                    pl.col(que_id).cast(pl.Utf8).str.extract(r"([0-9]+)$", 1).cast(pl.Int64, strict=False),
+                    pl.col(que_id)
+                    .cast(pl.Utf8)
+                    .str.extract(r"([0-9]+)$", 1)
+                    .cast(pl.Int64, strict=False),
                 ]
             )
             additional_query_df = additional_query_df.with_columns(
                 pl.coalesce(
                     [
-                        pl.col(que_id).replace_strict(mapping_dict, default=None).cast(pl.Utf8),
+                        pl.col(que_id)
+                        .replace_strict(mapping_dict, default=None)
+                        .cast(pl.Utf8),
                         (pl.lit(offset) + additional_que_id_int_expr).cast(pl.Utf8),
                     ]
                 ).alias(que_id)
             )
             # Reorder columns so all columns starting with 'id' (case-insensitive) are at the beginning
-            id_cols = [col for col in additional_query_df.columns if col.lower().startswith("id") or col.lower() == "label"]
-            other_cols = [col for col in additional_query_df.columns if col not in id_cols]
+            id_cols = [
+                col
+                for col in additional_query_df.columns
+                if col.lower().startswith("id") or col.lower() == "label"
+            ]
+            other_cols = [
+                col for col in additional_query_df.columns if col not in id_cols
+            ]
             additional_query_df = additional_query_df.select(id_cols + other_cols)
-            
+
             # Write the combined file (all features)
             query_file_path = pathlib.Path(file)
-            query_file_path = query_file_path.with_name(query_file_path.stem + args.new_files_suffix + ".tsv")
+            query_file_path = query_file_path.with_name(
+                query_file_path.stem + args.new_files_suffix + ".tsv"
+            )
             additional_query_df.write_csv(query_file_path, separator="\t")
             print(f"     - Updated combined file saved as: {query_file_path}")
-            
+
             # Write the matched-only file
-            matched_additional_query_df = additional_query_df.filter(pl.col("id_metextractII") != "")
+            matched_additional_query_df = additional_query_df.filter(
+                pl.col("id_metextractII") != ""
+            )
             matched_query_file_path = pathlib.Path(file)
             matched_query_file_path = matched_query_file_path.with_name(
                 matched_query_file_path.stem + args.new_files_suffix + "_matched.tsv"
             )
-            matched_additional_query_df.write_csv(matched_query_file_path, separator="\t")
+            matched_additional_query_df.write_csv(
+                matched_query_file_path, separator="\t"
+            )
             print(f"     - Matched-only file saved as: {matched_query_file_path}")
 
         elif file.endswith(".mgf"):
@@ -781,9 +905,11 @@ if __name__ == "__main__":
             combined_mgf_path = file.replace(".mgf", args.new_files_suffix + ".mgf")
             export_mgf_file(newMGF_combined, combined_mgf_path)
             print(f"     - Combined file saved as: {combined_mgf_path}")
-            
+
             # Export matched-only file
-            matched_mgf_path = file.replace(".mgf", args.new_files_suffix + "_matched.mgf")
+            matched_mgf_path = file.replace(
+                ".mgf", args.new_files_suffix + "_matched.mgf"
+            )
             export_mgf_file(newMGF_matched, matched_mgf_path)
             print(f"     - Matched-only file saved as: {matched_mgf_path}")
 
@@ -795,6 +921,7 @@ if __name__ == "__main__":
 
             # Create two copies for combined and matched-only versions
             from copy import deepcopy
+
             soup_matched = deepcopy(soup)
 
             # Update the combined file (all nodes and edges)
@@ -825,14 +952,22 @@ if __name__ == "__main__":
                     edge["target"] = str(target) + str(add_target)
 
             # Write the combined graphml to a new file
-            output_graphml_path = file.replace(".graphml", args.new_files_suffix + ".graphml")
+            output_graphml_path = file.replace(
+                ".graphml", args.new_files_suffix + ".graphml"
+            )
             with open(output_graphml_path, "w") as f:
-                f.write(re.sub("<binary>\\s*(.*)\\s*</binary>", "<binary>\\1</binary>", soup.prettify().replace("\r", "")))
+                f.write(
+                    re.sub(
+                        "<binary>\\s*(.*)\\s*</binary>",
+                        "<binary>\\1</binary>",
+                        soup.prettify().replace("\r", ""),
+                    )
+                )
             print(f"     - Combined file saved as: {output_graphml_path}")
 
             # Update the matched-only file (only mapped nodes and their connected edges)
             mapped_node_ids = set(mapping_dict.keys())
-            
+
             # Remove unmapped nodes from matched version
             for node in soup_matched.find_all("node"):
                 node_id = offset + int(node["id"])
@@ -859,11 +994,19 @@ if __name__ == "__main__":
                     target_int = int(target)
                 except ValueError:
                     target_int = None
-                
+
                 # Check if both source and target are mapped
-                source_mapped = (source_int + offset in mapped_node_ids) if source_int is not None else False
-                target_mapped = (target_int + offset in mapped_node_ids) if target_int is not None else False
-                
+                source_mapped = (
+                    (source_int + offset in mapped_node_ids)
+                    if source_int is not None
+                    else False
+                )
+                target_mapped = (
+                    (target_int + offset in mapped_node_ids)
+                    if target_int is not None
+                    else False
+                )
+
                 if source_mapped and target_mapped:
                     add_source = mapping_dict.get(source_int + offset, "")
                     add_target = mapping_dict.get(target_int + offset, "")
@@ -875,9 +1018,17 @@ if __name__ == "__main__":
                     edge.decompose()
 
             # Write the matched-only graphml to a new file
-            output_graphml_matched_path = file.replace(".graphml", args.new_files_suffix + "_matched.graphml")
+            output_graphml_matched_path = file.replace(
+                ".graphml", args.new_files_suffix + "_matched.graphml"
+            )
             with open(output_graphml_matched_path, "w") as f:
-                f.write(re.sub("<binary>\\s*(.*)\\s*</binary>", "<binary>\\1</binary>", soup_matched.prettify().replace("\r", "")))
+                f.write(
+                    re.sub(
+                        "<binary>\\s*(.*)\\s*</binary>",
+                        "<binary>\\1</binary>",
+                        soup_matched.prettify().replace("\r", ""),
+                    )
+                )
             print(f"     - Matched-only file saved as: {output_graphml_matched_path}")
     print("----------------------------------------------------------------\n")
 

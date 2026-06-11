@@ -3,6 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #   "textual",
+#   "httpx",
 # ]
 # ///
 
@@ -10,10 +11,13 @@ import csv
 import json
 import shutil
 import subprocess
+import zipfile
+import io
 from datetime import datetime
 from pathlib import Path
 from time import time
 
+import httpx
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -36,11 +40,27 @@ from textual.widgets.selection_list import Selection
 # Paths resolved relative to this script
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent.parent.resolve()
+SOFTWARE_DIR = SCRIPT_DIR / "software"
 
-DEFAULT_MZMINE = str(
-    SCRIPT_DIR / "mzmine_Windows_portable-4.5.20" / "mzmine_console.exe"
-)
-DEFAULT_SIRIUS = str(SCRIPT_DIR / "sirius-6.2.2-win-x64" / "sirius.exe")
+# Known software packages and their download locations
+SOFTWARE_PACKAGES = {
+    "MZmine 4.10.1": {
+        "url": "https://github.com/mzmine/mzmine/releases/download/v4.10.1/mzmine_Windows_portable-4.10.1.zip",
+        "folder": "mzmine_Windows_portable-4.10.1",
+        "mzmine_executable": "mzmine_console.exe",
+    },
+    "MZmine 4.5.20": {
+        "url": "https://github.com/mzmine/mzmine/releases/download/v4.5.20/mzmine_Windows_portable-4.5.20.zip",
+        "folder": "mzmine_Windows_portable-4.5.20",
+        "mzmine_executable": "mzmine_console.exe",
+    },
+    "SIRIUS 6.2.2": {
+        "url": "https://github.com/sirius-ms/sirius/releases/download/v6.2.2/sirius-6.2.2-win-x64.zip",
+        "folder": "sirius-6.2.2-win-x64",
+        "mzmine_executable": "sirius.bat",
+    },
+}
+
 DEFAULT_OUTDIR = str(SCRIPT_DIR.parent / "mzmine__results")
 
 _SCRIPTS = SCRIPT_DIR / "scripts"
@@ -60,8 +80,20 @@ DEFAULT_MEII_REF = r"H:\LV_comparison\Data\LV2026\Fullscan\FPS\results.tsv"
 # ---------------------------------------------------------------------------
 # Task catalogue — loaded from tasks.json next to this script
 # ---------------------------------------------------------------------------
-_TASKS_FILE = SCRIPT_DIR / "tasks.json"
-TASK_PARAMS: dict[str, dict] = json.loads(_TASKS_FILE.read_text(encoding="utf-8"))
+TASK_FILES = sorted(list(SCRIPT_DIR.glob("tasks*.json")))
+
+
+def load_tasks(file_path: Path) -> dict[str, dict]:
+    try:
+        return json.loads(file_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+# We'll initialize these later in the App if needed,
+# but for now we pick the first one as default if it exists.
+_TASKS_FILE = TASK_FILES[0] if TASK_FILES else SCRIPT_DIR / "tasks.json"
+TASK_PARAMS: dict[str, dict] = load_tasks(_TASKS_FILE)
 
 # Main processing steps shown at the top level
 PROCESSING_STEPS = [
@@ -91,6 +123,42 @@ MZMINE_SUBSTEPS = [
 # ---------------------------------------------------------------------------
 
 
+def download_and_unpack(name: str, log_fn) -> bool:
+    """Download and unpack a software package."""
+    info = SOFTWARE_PACKAGES.get(name)
+    if not info:
+        log_fn(f"Unknown software: {name}")
+        return False
+
+    url = info["url"]
+    dest_folder = SOFTWARE_DIR / info["folder"]
+
+    if dest_folder.exists():
+        log_fn(f"Software already exists at {dest_folder}")
+        return True
+
+    log_fn(f"Downloading {name} from {url} ...")
+    try:
+        SOFTWARE_DIR.mkdir(parents=True, exist_ok=True)
+        with httpx.Client(follow_redirects=True) as client:
+            response = client.get(url)
+            response.raise_for_status()
+            content = response.content
+
+        log_fn(f"Unpacking {name} to {dest_folder} ...")
+        with zipfile.ZipFile(io.BytesIO(content)) as z:
+            # Extract to the subfolder defined in SOFTWARE_PACKAGES
+            z.extractall(dest_folder)
+
+        log_fn(f"Successfully installed {name}.")
+        return True
+    except Exception as e:
+        log_fn(f"Failed to download/unpack {name}: {e}")
+        if dest_folder.exists():
+            shutil.rmtree(dest_folder)
+        return False
+
+
 def _run_command(
     cmd: list[str],
     log_fn,
@@ -101,6 +169,10 @@ def _run_command(
     """Run *cmd* and stream every line to *log_fn*.  Optionally tee to a file."""
     log_fn(f"  $ {' '.join(cmd)}")
     try:
+        # On Windows, running batch files or certain executables may require shell=True
+        use_shell = any(arg.lower().endswith(".bat") for arg in cmd) or any(
+            arg.lower().endswith(".cmd") for arg in cmd
+        )
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -109,6 +181,7 @@ def _run_command(
             encoding="utf-8",
             errors="replace",
             cwd=str(cwd) if cwd else None,
+            shell=use_shell,
         )
         collected: list[str] = []
         assert proc.stdout is not None
@@ -151,9 +224,18 @@ def process_task(task: str, config: dict, log_fn) -> bool:
     # When subdirectories are requested each task gets its own folder;
     # otherwise all files land directly in the base output directory.
     outdir = base_outdir / task if config.get("use_subdirectories") else base_outdir
-    mzmine = Path(config["mzmine"])
-    sirius = Path(config["sirius"])
+
     params = TASK_PARAMS[task]
+
+    # Use executable from task if present, otherwise fallback to config default
+    mzmine_exe = params.get("mzmine_executable", config["mzmine"])
+    mzmine = Path(mzmine_exe)
+    if not mzmine.is_absolute():
+        mzmine = SCRIPT_DIR / mzmine
+
+    sirius = Path(config["sirius"])
+    if not sirius.is_absolute():
+        sirius = SCRIPT_DIR / sirius
 
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "params_scripts_etc").mkdir(exist_ok=True)
@@ -630,6 +712,26 @@ class ConfigScreen(Screen):
         min-width: 18;
     }
 
+    .software-row {
+        height: 3;
+        align: left middle;
+        margin-bottom: 1;
+    }
+
+    .software-name {
+        width: 25;
+        content-align: left middle;
+    }
+
+    .software-status {
+        width: 1fr;
+        content-align: left middle;
+    }
+
+    .download-btn {
+        width: 15;
+    }
+
     .step-row {
         height: 3;
     }
@@ -666,6 +768,51 @@ class ConfigScreen(Screen):
         yield Header(show_clock=True)
         yield Footer()
         with ScrollableContainer(id="config-scroll"):
+            # ---- Software Selection ----------------------------------
+            with Container(classes="section"):
+                yield Static("Software Versions", classes="section-title")
+                for name, info in SOFTWARE_PACKAGES.items():
+                    with Horizontal(
+                        classes="software-row",
+                        id=f"row-{name.replace(' ', '-').replace('.', '-').lower()}",
+                    ):
+                        yield Static(name, classes="software-name")
+                        path = SOFTWARE_DIR / info["folder"] / info["mzmine_executable"]
+                        exists = path.exists()
+                        status_text = (
+                            f"Installed: {path.name}" if exists else "Not installed"
+                        )
+                        yield Static(
+                            status_text,
+                            classes="software-status",
+                            id=f"status-{name.replace(' ', '-').replace('.', '-').lower()}",
+                        )
+                        if not exists:
+                            yield Button(
+                                "Download",
+                                id=f"dl-{name.replace(' ', '-').replace('.', '-').lower()}",
+                                classes="download-btn",
+                                variant="primary",
+                            )
+                        else:
+                            yield Button(
+                                "Redownload",
+                                id=f"dl-{name.replace(' ', '-').replace('.', '-').lower()}",
+                                classes="download-btn",
+                                variant="default",
+                            )
+
+            # ---- Task File Selection ---------------------------------
+            with Container(classes="section"):
+                yield Static("Task Configuration File", classes="section-title")
+                yield SelectionList(
+                    *[
+                        Selection(str(f.name), str(f), f == _TASKS_FILE)
+                        for f in TASK_FILES
+                    ],
+                    id="task-file-list",
+                )
+
             # ---- Paths -----------------------------------------------
             with Container(classes="section"):
                 yield Static("Paths & Directories", classes="section-title")
@@ -683,7 +830,10 @@ class ConfigScreen(Screen):
                     "Datasets  (space / click to toggle)", classes="section-title"
                 )
                 yield SelectionList(
-                    *[Selection(task, task, True) for task in _SORTED_TASKS],
+                    *[
+                        Selection(task, task, True)
+                        for task in sorted(TASK_PARAMS.keys())
+                    ],
                     id="dataset-list",
                 )
                 with Horizontal(classes="sel-buttons"):
@@ -717,26 +867,83 @@ class ConfigScreen(Screen):
                     variant="success",
                 )
 
+    def on_mount(self) -> None:
+        """Call on_mount to refresh status or set initial state."""
+        # Ensure we have a valid task file selected in UI
+        if TASK_FILES:
+            sl = self.query_one("#task-file-list", SelectionList)
+            sl.select(str(_TASKS_FILE))
+
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id and event.button.id.startswith("dl-"):
+            name_id = event.button.id[3:]
+            # Find the original name from SOFTWARE_PACKAGES
+            target_name = None
+            for name in SOFTWARE_PACKAGES:
+                if name.replace(" ", "-").replace(".", "-").lower() == name_id:
+                    target_name = name
+                    break
+            if target_name:
+                self._download_software(target_name)
+            return
+
         if event.button.id == "sel-all":
-            sl: SelectionList = self.query_one("#dataset-list", SelectionList)
-            for task in _SORTED_TASKS:
+            sl = self.query_one("#dataset-list", SelectionList)
+            for task in sorted(TASK_PARAMS.keys()):
                 sl.select(task)
             return
         if event.button.id == "sel-none":
             sl = self.query_one("#dataset-list", SelectionList)
-            for task in _SORTED_TASKS:
+            for task in sorted(TASK_PARAMS.keys()):
                 sl.deselect(task)
             return
         if event.button.id == "start-btn":
             self._start_processing()
 
+    @work(thread=True)
+    def _download_software(self, name: str) -> None:
+        name_id = name.replace(" ", "-").replace(".", "-").lower()
+        btn = self.query_one(f"#dl-{name_id}", Button)
+        status = self.query_one(f"#status-{name_id}", Static)
+
+        self.app.call_from_thread(btn.set_loading, True)
+        self.app.call_from_thread(status.update, "Downloading...")
+
+        def log_fn(msg):
+            self.app.call_from_thread(status.update, msg)
+
+        success = download_and_unpack(name, log_fn)
+
+        self.app.call_from_thread(btn.set_loading, False)
+        if success:
+            info = SOFTWARE_PACKAGES[name]
+            path = SOFTWARE_DIR / info["folder"] / info["mzmine_executable"]
+            self.app.call_from_thread(status.update, f"Installed: {path.name}")
+            self.app.call_from_thread(setattr, btn, "label", "Redownload")
+            self.app.call_from_thread(setattr, btn, "variant", "default")
+        else:
+            self.app.call_from_thread(status.update, "Download failed")
+
+    def on_selection_list_selected_changed(
+        self, event: SelectionList.SelectedChanged
+    ) -> None:
+        if event.selection_list.id == "task-file-list":
+            if event.selection_list.selected:
+                global TASK_PARAMS, _TASKS_FILE
+                _TASKS_FILE = Path(event.selection_list.selected[0])
+                TASK_PARAMS = load_tasks(_TASKS_FILE)
+                # Update dataset list
+                sl = self.query_one("#dataset-list", SelectionList)
+                sl.clear_options()
+                for task in sorted(TASK_PARAMS.keys()):
+                    sl.add_option(Selection(task, task, True))
+
     def _start_processing(self) -> None:
-        sl: SelectionList = self.query_one("#dataset-list", SelectionList)
+        sl = self.query_one("#dataset-list", SelectionList)
         selected_tasks: list[str] = list(sl.selected)
 
         msg_widget = self.query_one("#validation-msg", Static)
@@ -754,13 +961,32 @@ class ConfigScreen(Screen):
             msg_widget.update("Please enable at least one processing step.")
             return
 
+        # Determine default executables (fallback if not in task)
+        # We'll just pick the first installed MZmine and SIRIUS
+        def_mzmine = ""
+        def_sirius = ""
+        for name, info in SOFTWARE_PACKAGES.items():
+            path = SOFTWARE_DIR / info["folder"] / info["mzmine_executable"]
+            if path.exists():
+                if "MZmine" in name and not def_mzmine:
+                    def_mzmine = str(path)
+                elif "SIRIUS" in name and not def_sirius:
+                    def_sirius = str(path)
+
+        if not def_mzmine and self.query_one("#proc_mzmine", Checkbox).value:
+            msg_widget.update("MZmine not found. Please download it first.")
+            return
+        if not def_sirius and self.query_one("#proc_sirius", Checkbox).value:
+            msg_widget.update("SIRIUS not found. Please download it first.")
+            return
+
         msg_widget.update("")
 
         config = {
             # Paths
             "outdir": self.query_one("#outdir", Input).value.strip(),
-            "mzmine": DEFAULT_MZMINE,
-            "sirius": DEFAULT_SIRIUS,
+            "mzmine": def_mzmine,
+            "sirius": def_sirius,
             "util_mgftools_dir": DEFAULT_UTIL_MGFTOOLS,
             "util_fragextract_exe": DEFAULT_UTIL_FRAGEXTRACT,
             "meii_ref_file": DEFAULT_MEII_REF,
