@@ -9,6 +9,7 @@
 
 import csv
 import json
+import re
 import shutil
 import subprocess
 import zipfile
@@ -41,25 +42,162 @@ from textual.widgets.selection_list import Selection
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).parent.parent.resolve()
 SOFTWARE_DIR = SCRIPT_DIR / "software"
+LIBRARIES_DIR = SCRIPT_DIR / "libraries"
+LIBRARIES_CONFIG_FILE = SCRIPT_DIR / "spectral_libraries.json"
+SOFTWARE_PACKAGES_FILE = SCRIPT_DIR / "software_packages.json"
+MYPROJECT_FILE = SCRIPT_DIR / "myproject.json"
 
-# Known software packages and their download locations
-SOFTWARE_PACKAGES = {
-    "MZmine 4.10.1": {
-        "url": "https://github.com/mzmine/mzmine/releases/download/v4.10.1/mzmine_Windows_portable-4.10.1.zip",
-        "folder": "mzmine_Windows_portable-4.10.1",
-        "mzmine_executable": "mzmine_console.exe",
-    },
-    "MZmine 4.5.20": {
-        "url": "https://github.com/mzmine/mzmine/releases/download/v4.5.20/mzmine_Windows_portable-4.5.20.zip",
-        "folder": "mzmine_Windows_portable-4.5.20",
-        "mzmine_executable": "mzmine_console.exe",
-    },
-    "SIRIUS 6.2.2": {
-        "url": "https://github.com/sirius-ms/sirius/releases/download/v6.2.2/sirius-6.2.2-win-x64.zip",
-        "folder": "sirius-6.2.2-win-x64",
-        "mzmine_executable": "sirius.bat",
-    },
-}
+# ---------------------------------------------------------------------------
+# Spectral libraries – loaded from spectral_libraries.json (name → url)
+# ---------------------------------------------------------------------------
+
+
+def load_software_packages() -> dict[str, dict[str, str]]:
+    try:
+        data = json.loads(SOFTWARE_PACKAGES_FILE.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return {}
+    normalized: dict[str, dict[str, str]] = {}
+    for version, info in data.items():
+        if isinstance(info, dict):
+            normalized[str(version)] = {
+                str(key): str(value) for key, value in info.items() if value is not None
+            }
+    return normalized
+
+
+def load_library_config() -> dict[str, str | list[str]]:
+    try:
+        return json.loads(LIBRARIES_CONFIG_FILE.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return {}
+
+
+def load_project_version() -> str:
+    try:
+        data = json.loads(MYPROJECT_FILE.read_text(encoding="utf-8-sig"))
+        version = str(data.get("version", "unknown")).strip()
+        return version or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def normalize_library_config(
+    config: dict[str, str | list[str]],
+) -> dict[str, list[str]]:
+    """Normalize library config so all values are lists of URLs."""
+    normalized = {}
+    for name, urls in config.items():
+        if isinstance(urls, str):
+            normalized[name] = [urls]
+        elif isinstance(urls, list):
+            normalized[name] = urls
+    return normalized
+
+
+LIBRARY_PACKAGES_RAW: dict[str, str | list[str]] = load_library_config()
+LIBRARY_PACKAGES: dict[str, list[str]] = normalize_library_config(LIBRARY_PACKAGES_RAW)
+SOFTWARE_PACKAGES: dict[str, dict[str, str]] = load_software_packages()
+PROJECT_VERSION = load_project_version()
+
+
+def _software_id(version: str) -> str:
+    return version.replace(" ", "-").replace(".", "-").lower()
+
+
+def get_software_package(version: str) -> dict[str, str] | None:
+    return SOFTWARE_PACKAGES.get(version)
+
+
+def _library_slug(name: str) -> str:
+    """Return a safe widget-id slug for a library name."""
+    import re
+
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def _url_filename(url: str) -> str:
+    """Derive a local filename from a download URL."""
+    name = url.split("/")[-1].split("?")[0]
+    return name if name else "library.bin"
+
+
+def find_library_file(url: str) -> "Path | None":
+    """Return the Path to an already-downloaded library file, or None."""
+    filename = _url_filename(url)
+    if filename.endswith(".zip"):
+        stem = Path(filename).stem
+        # look for any extracted spectral file matching the zip stem
+        for ext in (".mgf", ".msp", ".json", ".csv"):
+            candidate = LIBRARIES_DIR / (stem + ext)
+            if candidate.exists():
+                return candidate
+        # broader search inside LIBRARIES_DIR
+        for f in LIBRARIES_DIR.glob(f"{stem}*"):
+            if f.suffix.lower() in (".mgf", ".msp", ".json"):
+                return f
+        return None
+    candidate = LIBRARIES_DIR / filename
+    return candidate if candidate.exists() else None
+
+
+def count_library_entries(file_path: "Path") -> "int | None":
+    """Count spectra entries in a downloaded spectral library file."""
+    try:
+        suffix = file_path.suffix.lower()
+        if suffix == ".mgf":
+            count = 0
+            with open(file_path, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    if line.strip().upper() == "BEGIN IONS":
+                        count += 1
+            return count
+        elif suffix == ".msp":
+            count = 0
+            with open(file_path, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    if line.strip().upper().startswith("NAME:"):
+                        count += 1
+            return count
+        elif suffix == ".json":
+            data = json.loads(file_path.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return len(data)
+        return None
+    except Exception:
+        return None
+
+
+def download_library(name: str, url: str, log_fn) -> "bool":
+    """Download (and unzip if necessary) a spectral library file."""
+    LIBRARIES_DIR.mkdir(parents=True, exist_ok=True)
+    filename = _url_filename(url)
+    dest = LIBRARIES_DIR / filename
+
+    log_fn(f"Downloading {name} …")
+    try:
+        with httpx.Client(follow_redirects=True, timeout=600) as client:
+            with client.stream("GET", url) as response:
+                response.raise_for_status()
+                with open(dest, "wb") as fh:
+                    for chunk in response.iter_bytes(chunk_size=1024 * 1024):
+                        fh.write(chunk)
+
+        if filename.endswith(".zip"):
+            log_fn(f"Extracting {filename} …")
+            with zipfile.ZipFile(dest) as z:
+                z.extractall(LIBRARIES_DIR)
+            dest.unlink(missing_ok=True)
+            log_fn(f"Extracted to {LIBRARIES_DIR}")
+        else:
+            log_fn(f"Saved to {dest}")
+        return True
+    except Exception as exc:
+        log_fn(f"Failed to download {name}: {exc}")
+        if dest.exists():
+            dest.unlink(missing_ok=True)
+        return False
+
 
 DEFAULT_OUTDIR = str(SCRIPT_DIR.parent / "mzmine__results")
 
@@ -85,7 +223,7 @@ TASK_FILES = sorted(list(SCRIPT_DIR.glob("tasks*.json")))
 
 def load_tasks(file_path: Path) -> dict[str, dict]:
     try:
-        return json.loads(file_path.read_text(encoding="utf-8"))
+        return json.loads(file_path.read_text(encoding="utf-8-sig"))
     except Exception:
         return {}
 
@@ -123,13 +261,14 @@ MZMINE_SUBSTEPS = [
 # ---------------------------------------------------------------------------
 
 
-def download_and_unpack(name: str, log_fn) -> bool:
+def download_and_unpack(version: str, log_fn) -> bool:
     """Download and unpack a software package."""
-    info = SOFTWARE_PACKAGES.get(name)
+    info = get_software_package(version)
     if not info:
-        log_fn(f"Unknown software: {name}")
+        log_fn(f"Unknown software version: {version}")
         return False
 
+    display_name = info.get("display_name", version)
     url = info["url"]
     dest_folder = SOFTWARE_DIR / info["folder"]
 
@@ -137,7 +276,7 @@ def download_and_unpack(name: str, log_fn) -> bool:
         log_fn(f"Software already exists at {dest_folder}")
         return True
 
-    log_fn(f"Downloading {name} from {url} ...")
+    log_fn(f"Downloading {display_name} from {url} ...")
     try:
         SOFTWARE_DIR.mkdir(parents=True, exist_ok=True)
         with httpx.Client(follow_redirects=True) as client:
@@ -145,15 +284,15 @@ def download_and_unpack(name: str, log_fn) -> bool:
             response.raise_for_status()
             content = response.content
 
-        log_fn(f"Unpacking {name} to {dest_folder} ...")
+        log_fn(f"Unpacking {display_name} to {dest_folder} ...")
         with zipfile.ZipFile(io.BytesIO(content)) as z:
             # Extract to the subfolder defined in SOFTWARE_PACKAGES
             z.extractall(dest_folder)
 
-        log_fn(f"Successfully installed {name}.")
+        log_fn(f"Successfully installed {display_name}.")
         return True
     except Exception as e:
-        log_fn(f"Failed to download/unpack {name}: {e}")
+        log_fn(f"Failed to download/unpack {display_name}: {e}")
         if dest_folder.exists():
             shutil.rmtree(dest_folder)
         return False
@@ -168,6 +307,15 @@ def _run_command(
 ) -> int:
     """Run *cmd* and stream every line to *log_fn*.  Optionally tee to a file."""
     log_fn(f"  $ {' '.join(cmd)}")
+    t_start = time()
+    # Write header to log file before the command starts
+    if log_file:
+        mode = "a" if append else "w"
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(log_file, mode, encoding="utf-8") as fh:
+            fh.write(f"\nCommand: {' '.join(cmd)}\n")
+            fh.write("#" * 80 + "\n")
+            fh.write("\n")
     try:
         # On Windows, running batch files or certain executables may require shell=True
         use_shell = any(arg.lower().endswith(".bat") for arg in cmd) or any(
@@ -190,11 +338,14 @@ def _run_command(
             log_fn(line)
             collected.append(line)
         proc.wait()
+        elapsed = time() - t_start
         if log_file:
-            mode = "a" if append else "w"
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(log_file, mode, encoding="utf-8") as fh:
+            with open(log_file, "a", encoding="utf-8") as fh:
                 fh.write("\n".join(collected) + "\n")
+                fh.write("\n")
+                fh.write(f"\n{'#' * 80}\n")
+                fh.write(f"Elapsed: {elapsed:.1f} s\n")
+                fh.write("\n")
         return proc.returncode if proc.returncode is not None else 0
     except FileNotFoundError as exc:
         log_fn(f"  ERROR – command not found: {exc}")
@@ -202,6 +353,12 @@ def _run_command(
     except Exception as exc:  # noqa: BLE001
         log_fn(f"  ERROR – {exc}")
         return 1
+
+
+def _tool_log_file(outdir: Path, order: int, label: str) -> Path:
+    """Return a numbered log filename for one processing tool."""
+    safe_label = re.sub(r"[^a-z0-9]+", "_", label.lower()).strip("_")
+    return outdir / f"{order:02d}___{safe_label}.log.txt"
 
 
 def _convert_csv_to_tsv(csv_path: Path, tsv_path: Path, log_fn) -> None:
@@ -227,31 +384,35 @@ def process_task(task: str, config: dict, log_fn) -> bool:
 
     params = TASK_PARAMS[task]
 
-    # Use executable from task if present, otherwise fallback to config default
-    mzmine_exe = params.get("mzmine_executable", config["mzmine"])
-    mzmine = Path(mzmine_exe)
-    if not mzmine.is_absolute():
-        mzmine = SCRIPT_DIR / mzmine
+    mzmine_version = str(params.get("mzmine_version", config["mzmine_version"]))
+    mzmine_info = get_software_package(mzmine_version)
+    if not mzmine_info:
+        log_fn(f"Missing MZmine package for version {mzmine_version}")
+        return False
+    mzmine = SOFTWARE_DIR / mzmine_info["folder"] / mzmine_info["executable"]
 
-    sirius = Path(config["sirius"])
-    if not sirius.is_absolute():
-        sirius = SCRIPT_DIR / sirius
+    sirius_version = str(params.get("sirius_version", config["sirius_version"]))
+    sirius_info = get_software_package(sirius_version)
+    if not sirius_info:
+        log_fn(f"Missing SIRIUS package for version {sirius_version}")
+        return False
+    sirius = SOFTWARE_DIR / sirius_info["folder"] / sirius_info["executable"]
 
     outdir.mkdir(parents=True, exist_ok=True)
     (outdir / "params_scripts_etc").mkdir(exist_ok=True)
-    log_fn(f"  output: {outdir}")
+
+    # Emit dataset marker for UI
+    log_fn(f"Task: {task}")
+    log_fn(f"Output: {outdir}")
 
     t0 = time()
-    log_fn(f"\n{'=' * 60}")
-    log_fn(f"  Task: {task}")
-    log_fn(f"{'=' * 60}")
 
     # ------------------------------------------------------------------
     # Step 1 – MZmine
     # ------------------------------------------------------------------
     if config["proc_mzmine"]:
-        mzmine_log = outdir / f"{task}.1_MZmine_log.txt"
-        log_fn("\n[Step 1] Running MZmine ...")
+        mzmine_log = _tool_log_file(outdir, 1, "MZmine")
+        log_fn("[Step 1] Running MZmine")
 
         batch_file = SCRIPT_DIR / params["MZmine_batch"]
         input_files_file = (SCRIPT_DIR / params["input_files"]).resolve()
@@ -271,9 +432,29 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         shutil.copy2(str(batch_file), str(outdir / "params_scripts_etc"))
         shutil.copy2(str(input_files_file), str(outdir / "params_scripts_etc"))
 
+        # Build optional --libraries argument
+        library_paths: list[str] = config.get("library_paths", [])
+        if library_paths:
+            libs_dest = outdir / "params_scripts_etc" / "spectral_libraries"
+            libs_dest.mkdir(exist_ok=True)
+            copied_paths: list[str] = []
+            for lp in library_paths:
+                src = Path(lp)
+                dst = libs_dest / src.name
+                shutil.copy2(src, dst)
+                log_fn(f"  copied library: {src.name}")
+                copied_paths.append(str(dst))
+            libraries_txt = outdir / "params_scripts_etc" / "spectral_libraries.txt"
+            libraries_txt.write_text("\n".join(copied_paths) + "\n", encoding="utf-8")
+            log_fn(f"  libraries: {libraries_txt} ({len(copied_paths)} file(s))")
+            libraries_args = ["--libraries", str(libraries_txt)]
+        else:
+            libraries_args = []
+
         rc = _run_command(
             [
                 str(mzmine),
+                *libraries_args,
                 "-b",
                 str(batch_file),
                 "-i",
@@ -312,6 +493,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.1 Rename feature IDs ---
         if config.get("step_rename_ids", True):
             log_fn("\n[Step 1.1] Renaming feature IDs ...")
+            rename_log = _tool_log_file(outdir, 2, "rename_feature_ids")
             _run_command(
                 [
                     "uv",
@@ -330,7 +512,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                     str(outdir / f"{task}__sirius.mgf"),
                 ],
                 log_fn,
-                mzmine_log,
+                rename_log,
                 cwd=SCRIPT_DIR,
                 append=True,
             )
@@ -340,6 +522,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.2 Split MGF files ---
         if config.get("step_split_mgf", False):
             log_fn("\n[Step 1.2] Splitting MGF files ...")
+            split_log = _tool_log_file(outdir, 3, "split_mgf")
             mgftools = config.get("util_mgftools_dir", "").strip()
             if mgftools:
                 mgftools_main = str(Path(mgftools) / "main.py")
@@ -357,7 +540,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                             "--mslevel",
                         ],
                         log_fn,
-                        mzmine_log,
+                        split_log,
                         cwd=SCRIPT_DIR,
                         append=True,
                     )
@@ -369,6 +552,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.3 Clean 12C13C spectra ---
         if config.get("step_clean_spectra", False):
             log_fn("\n[Step 1.3] Cleaning 12C13C spectra ...")
+            clean_log = _tool_log_file(outdir, 4, "clean_spectra")
             fragextract = config.get("util_fragextract_exe", "").strip()
             if fragextract:
                 for suffix in ["sirius", "iimn_fbmn"]:
@@ -386,7 +570,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                             str(folder_out),
                         ],
                         log_fn,
-                        mzmine_log,
+                        clean_log,
                         cwd=SCRIPT_DIR,
                         append=True,
                     )
@@ -400,6 +584,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.4 Combine results with MEII ---
         if config.get("step_combine_meii", False):
             log_fn("\n[Step 1.4] Combining results with MEII ...")
+            combine_log = _tool_log_file(outdir, 5, "combine_meii")
             meii_ref = config.get("meii_ref_file", "").strip()
             if meii_ref:
                 shutil.copy2(
@@ -433,7 +618,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                         str(outdir / f"{task}__sirius.mgf"),
                     ],
                     log_fn,
-                    mzmine_log,
+                    combine_log,
                     cwd=SCRIPT_DIR,
                     append=True,
                 )
@@ -445,6 +630,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.5 Reorder table ---
         if config.get("step_reorder_table", False):
             log_fn("\n[Step 1.5] Reordering table ...")
+            reorder_log = _tool_log_file(outdir, 6, "reorder_table")
             reorder_dir = config.get("util_reorder_dir", "").strip()
             if reorder_dir:
                 _run_command(
@@ -468,7 +654,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                         "--not_include_other_columns",
                     ],
                     log_fn,
-                    mzmine_log,
+                    reorder_log,
                     cwd=SCRIPT_DIR,
                     append=True,
                 )
@@ -482,6 +668,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.6 DDA inclusion list ---
         if config.get("step_dda_list", True):
             log_fn("\n[Step 1.6] Creating DDA inclusion list ...")
+            dda_log = _tool_log_file(outdir, 7, "dda_inclusion_list")
             _run_command(
                 [
                     "uv",
@@ -495,7 +682,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                     "0.1",
                 ],
                 log_fn,
-                mzmine_log,
+                dda_log,
                 cwd=SCRIPT_DIR,
                 append=True,
             )
@@ -505,6 +692,16 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         # --- 1.7 CSV → TSV ---
         if config.get("step_csv_to_tsv", True):
             log_fn("\n[Step 1.7] Converting CSV files to TSV ...")
+            csv_tsv_log = _tool_log_file(outdir, 8, "csv_to_tsv")
+            tool_log_fn = log_fn
+
+            def csv_tsv_log_fn(msg: str, _log_file: Path = csv_tsv_log) -> None:
+                tool_log_fn(msg)
+                _log_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(_log_file, "a", encoding="utf-8") as fh:
+                    fh.write(msg + "\n")
+
+            log_fn = csv_tsv_log_fn
             for base in [
                 f"{task}__full_feature_table",
                 f"{task}__full_feature_table2",
@@ -526,11 +723,11 @@ def process_task(task: str, config: dict, log_fn) -> bool:
     # Step 2 – SIRIUS
     # ------------------------------------------------------------------
     if config["proc_sirius"]:
-        sirius_log = outdir / f"{task}.2_SIRIUS_log.txt"
-        log_fn("\n[Step 2] Running SIRIUS ...")
+        log_fn("[Step 2] Running SIRIUS")
 
         # 2.1 Fix MGF
-        log_fn("\n[Step 2.1] Fixing MGF file ...")
+        log_fn("  [Step 2.1] Fixing MGF file ...")
+        fix_mgf_log = _tool_log_file(outdir, 9, "fix_mgf")
         shutil.copy2(str(MGF_FIX_SCRIPT), str(outdir / "params_scripts_etc"))
         _run_command(
             [
@@ -541,12 +738,13 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                 str(outdir / f"{task}__sirius.mgf"),
             ],
             log_fn,
-            sirius_log,
+            fix_mgf_log,
             cwd=SCRIPT_DIR,
         )
 
         # 2.2 Run SIRIUS
-        log_fn("\n[Step 2.2] Predicting fingerprints ...")
+        log_fn("  [Step 2.2] Predicting fingerprints ...")
+        sirius_log = _tool_log_file(outdir, 10, "predict_fingerprints")
         if params["polarity"] == "positive":
             fallback_ions = "--AdductSettings.fallback=[[M+H]+,[M+Na]+,[M+K]+,[M-H]-]"
         else:
@@ -566,13 +764,11 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                 "--FormulaSettings.enforced=H,C,N,O,P",
                 "--Timeout.secondsPerInstance=0",
                 "--AlgorithmProfile=orbitrap",
-                "--SpectralMatchingMassDeviation.allowedPeakDeviation=5.0ppm",
                 "--AdductSettings.ignoreDetectedAdducts=false",
                 "--AdductSettings.prioritizeInputFileAdducts=true",
                 "--UseHeuristic.useHeuristicAboveMz=300",
                 "--IsotopeMs2Settings=IGNORE",
-                "--MS2MassDeviation.allowedMassDeviation=5.0ppm",
-                "--SpectralMatchingMassDeviation.allowedPrecursorDeviation=5.0ppm",
+                "--MS2MassDeviation.allowedMassDeviation=15.0ppm",
                 "--FormulaSearchSettings.performDeNovoBelowMz=400.0",
                 "--FormulaSearchSettings.applyFormulaConstraintsToDatabaseCandidates=false",
                 "--EnforceElGordoFormula=true",
@@ -630,9 +826,10 @@ def run_all(config: dict, log_fn) -> None:
     # Archive
     # ------------------------------------------------------------------
     if config["archive_results"]:
-        log_fn(f"\n{'=' * 60}")
-        log_fn("Archiving results ...")
+        log_fn("Task: Archive Results")
+        log_fn("[Step 3] Archiving Results")
         outdir = Path(config["outdir"])
+        archive_log = _tool_log_file(outdir, 11, "archive_results")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         archive_name = SCRIPT_DIR.parent / f"Archive__{outdir.name}__{timestamp}.7z"
         seven_zip = Path(r"C:\Program Files\7-Zip\7z.exe")
@@ -640,6 +837,7 @@ def run_all(config: dict, log_fn) -> None:
             _run_command(
                 [str(seven_zip), "a", str(archive_name), str(outdir) + "\\"],
                 log_fn,
+                archive_log,
             )
             log_fn(f"  Archive created: {archive_name}")
         else:
@@ -675,7 +873,7 @@ class ConfigScreen(Screen):
     }
 
     .section {
-        border: round $panel;
+        border: round $warning;
         padding: 1 2;
         margin-bottom: 1;
         height: auto;
@@ -698,7 +896,7 @@ class ConfigScreen(Screen):
 
     SelectionList {
         height: auto;
-        max-height: 18;
+        max-height: 22;
         border: solid $panel;
     }
 
@@ -712,6 +910,15 @@ class ConfigScreen(Screen):
         min-width: 18;
     }
 
+    .sel-buttons Input {
+        width: 1fr;
+    }
+
+    .sel-buttons Static {
+        width: auto;
+        margin-right: 1;
+    }
+
     .software-row {
         height: 3;
         align: left middle;
@@ -719,7 +926,7 @@ class ConfigScreen(Screen):
     }
 
     .software-name {
-        width: 25;
+        width: 2fr;
         content-align: left middle;
     }
 
@@ -729,7 +936,32 @@ class ConfigScreen(Screen):
     }
 
     .download-btn {
-        width: 15;
+        width: 1fr;
+    }
+
+    .download-all-btn {
+        margin-bottom: 1;
+    }
+
+    .library-row {
+        height: 3;
+        align: left middle;
+        margin-bottom: 1;
+    }
+
+    .library-name {
+        width: 2fr;
+        content-align: left middle;
+    }
+
+    .library-status {
+        width: 1fr;
+        content-align: left middle;
+    }
+
+    .library-checkbox {
+        width: 2fr;
+        padding: 0 1 0 0;
     }
 
     .step-row {
@@ -741,16 +973,69 @@ class ConfigScreen(Screen):
         padding-left: 4;
     }
 
+    .substep-group-title {
+        margin: 1 0 0 2;
+        color: $text-disabled;
+    }
+
+    .mzmine-substep-box {
+        margin: 0 0 0 2;
+        padding: 0 1 0 1;
+        border: solid $panel;
+        height: auto;
+    }
+
+    .mzmine-substep-row {
+        height: auto;
+        margin: 0;
+    }
+
+    .mzmine-substep-row Checkbox {
+        width: 1fr;
+    }
+
     Collapsible {
         border: none;
         padding: 0;
+        margin-top: 0;
+    }
+
+    #dataset-split {
+        height: auto;
+        max-height: 32;
+    }
+
+    #dataset-left {
+        width: 1fr;
+        height: auto;
+    }
+
+    #dataset-right {
+        width: 1fr;
+        height: auto;
+        border-left: solid $panel;
+        padding: 0 0 0 1;
+    }
+
+    #dataset-details {
+        height: auto;
+        color: $text-disabled;
+    }
+
+    #dataset-count {
+        height: 1;
         margin-top: 1;
+        color: $text-disabled;
+    }
+
+    #dataset-filter {
+        height: 3;
     }
 
     #action-bar {
-        height: 4;
+        height: 7;
         align: center middle;
-        padding: 1 0;
+        padding: 2 0 3 0;
     }
 
     #start-btn {
@@ -770,37 +1055,108 @@ class ConfigScreen(Screen):
         with ScrollableContainer(id="config-scroll"):
             # ---- Software Selection ----------------------------------
             with Container(classes="section"):
-                yield Static("Software Versions", classes="section-title")
-                for name, info in SOFTWARE_PACKAGES.items():
-                    with Horizontal(
-                        classes="software-row",
-                        id=f"row-{name.replace(' ', '-').replace('.', '-').lower()}",
-                    ):
-                        yield Static(name, classes="software-name")
-                        path = SOFTWARE_DIR / info["folder"] / info["mzmine_executable"]
-                        exists = path.exists()
-                        status_text = (
-                            f"Installed: {path.name}" if exists else "Not installed"
-                        )
-                        yield Static(
-                            status_text,
-                            classes="software-status",
-                            id=f"status-{name.replace(' ', '-').replace('.', '-').lower()}",
-                        )
-                        if not exists:
+                with Collapsible(
+                    title="Software Versions", collapsed=False, id="coll-software"
+                ):
+                    yield Button(
+                        "Download All",
+                        id="dl-all-software",
+                        variant="default",
+                        classes="download-all-btn",
+                    )
+                    for version, info in SOFTWARE_PACKAGES.items():
+                        display_name = info.get("display_name", version)
+                        name_id = _software_id(version)
+                        with Horizontal(
+                            classes="software-row",
+                            id=f"row-{name_id}",
+                        ):
+                            yield Static(display_name, classes="software-name")
+                            yield Static(
+                                "[yellow]Checking…[/yellow]",
+                                classes="software-status",
+                                id=f"status-{name_id}",
+                            )
                             yield Button(
                                 "Download",
-                                id=f"dl-{name.replace(' ', '-').replace('.', '-').lower()}",
-                                classes="download-btn",
-                                variant="primary",
-                            )
-                        else:
-                            yield Button(
-                                "Redownload",
-                                id=f"dl-{name.replace(' ', '-').replace('.', '-').lower()}",
+                                id=f"dl-{name_id}",
                                 classes="download-btn",
                                 variant="default",
                             )
+
+            # ---- Spectral Libraries ---------------------------------
+            with Container(classes="section"):
+                with Collapsible(
+                    title="Spectral Libraries", collapsed=False, id="coll-libraries"
+                ):
+                    if not LIBRARY_PACKAGES:
+                        yield Static(
+                            f"No libraries configured. Edit {LIBRARIES_CONFIG_FILE.name}",
+                            classes="field-label",
+                        )
+                    with Horizontal(classes="library-action-row"):
+                        yield Button(
+                            "Download All",
+                            id="dl-all-libraries",
+                            variant="default",
+                            classes="download-all-btn",
+                        )
+                        yield Button(
+                            "Select All",
+                            id="lib-select-all",
+                            variant="success",
+                            classes="download-all-btn",
+                        )
+                        yield Button(
+                            "Deselect All",
+                            id="lib-deselect-all",
+                            variant="warning",
+                            classes="download-all-btn",
+                        )
+                    lib_idx = 0
+                    for lib_name, lib_urls in LIBRARY_PACKAGES.items():
+                        # Library collection header with download all button (only if multiple URLs)
+                        with Horizontal(
+                            classes="library-row", id=f"lib-header-{lib_idx}"
+                        ):
+                            yield Static(
+                                f"[bold]{lib_name}[/bold]",
+                                classes="library-name",
+                                id=f"lib-header-name-{lib_idx}",
+                            )
+                            if len(lib_urls) > 1:
+                                yield Button(
+                                    "Download All",
+                                    id=f"lib-collection-dl-{lib_idx}",
+                                    variant="default",
+                                    classes="download-btn",
+                                )
+                        # Individual URLs for this library
+                        for url_idx, lib_url in enumerate(lib_urls):
+                            url_filename = _url_filename(lib_url)
+                            with Horizontal(
+                                classes="library-row",
+                                id=f"lib-url-row-{lib_idx}-{url_idx}",
+                            ):
+                                yield Checkbox(
+                                    f"  {url_filename}",
+                                    value=False,
+                                    disabled=True,
+                                    id=f"lib-url-chk-{lib_idx}-{url_idx}",
+                                    classes="library-checkbox",
+                                )
+                                yield Static(
+                                    "Checking…",
+                                    classes="library-status",
+                                    id=f"lib-url-status-{lib_idx}-{url_idx}",
+                                )
+                                yield Button(
+                                    "Download",
+                                    id=f"lib-url-dl-{lib_idx}-{url_idx}",
+                                    classes="download-btn",
+                                    variant="default",
+                                )
+                        lib_idx += 1
 
             # ---- Task File Selection ---------------------------------
             with Container(classes="section"):
@@ -813,9 +1169,9 @@ class ConfigScreen(Screen):
                     id="task-file-list",
                 )
 
-            # ---- Paths -----------------------------------------------
+            # ---- Output path ----------------------------------------
             with Container(classes="section"):
-                yield Static("Paths & Directories", classes="section-title")
+                yield Static("Output path", classes="section-title")
 
                 yield Static("Output directory:", classes="field-label")
                 yield Input(
@@ -823,22 +1179,41 @@ class ConfigScreen(Screen):
                     id="outdir",
                     placeholder="Path to output folder",
                 )
+                for step_id, label, default in PIPELINE_OPTIONS:
+                    with Horizontal(classes="step-row"):
+                        yield Checkbox(label, value=default, id=step_id)
 
             # ---- Dataset selection ------------------------------------
             with Container(classes="section"):
                 yield Static(
-                    "Datasets  (space / click to toggle)", classes="section-title"
+                    "Datasets (space / click to toggle)", classes="section-title"
                 )
-                yield SelectionList(
-                    *[
-                        Selection(task, task, True)
-                        for task in sorted(TASK_PARAMS.keys())
-                    ],
-                    id="dataset-list",
-                )
-                with Horizontal(classes="sel-buttons"):
-                    yield Button("Select All", id="sel-all", variant="default")
-                    yield Button("Deselect All", id="sel-none", variant="default")
+                with Horizontal(id="dataset-split"):
+                    with Container(id="dataset-left"):
+                        with Horizontal(classes="sel-buttons"):
+                            yield Static("Filter:", classes="field-label")
+                            yield Input(
+                                placeholder="Filter datasets…",
+                                id="dataset-filter",
+                            )
+                        with Horizontal(classes="sel-buttons"):
+                            yield Button("Select All", id="sel-all", variant="default")
+                            yield Button(
+                                "Deselect All", id="sel-none", variant="default"
+                            )
+                        yield Static("", id="dataset-count")
+                        yield SelectionList(
+                            *[
+                                Selection(task, task, True)
+                                for task in sorted(TASK_PARAMS.keys())
+                            ],
+                            id="dataset-list",
+                        )
+                    with Container(id="dataset-right"):
+                        yield Static(
+                            "Highlight a dataset to see details.",
+                            id="dataset-details",
+                        )
 
             # ---- Processing steps ------------------------------------
             with Container(classes="section"):
@@ -846,17 +1221,19 @@ class ConfigScreen(Screen):
                 for step_id, label, default in PROCESSING_STEPS:
                     with Horizontal(classes="step-row"):
                         yield Checkbox(label, value=default, id=step_id)
-                with Collapsible(title="MZmine sub-steps", collapsed=True):
-                    for step_id, label, default in MZMINE_SUBSTEPS:
-                        with Horizontal(classes="substep-row"):
-                            yield Checkbox(label, value=default, id=step_id)
-
-            # ---- Options ---------------------------------------------
-            with Container(classes="section"):
-                yield Static("Options", classes="section-title")
-                for step_id, label, default in PIPELINE_OPTIONS:
-                    with Horizontal(classes="step-row"):
-                        yield Checkbox(label, value=default, id=step_id)
+                    if step_id == "proc_mzmine":
+                        yield Static("MZmine substeps", classes="substep-group-title")
+                        with Container(classes="mzmine-substep-box"):
+                            for row_start in range(0, len(MZMINE_SUBSTEPS), 3):
+                                with Horizontal(classes="mzmine-substep-row"):
+                                    for (
+                                        sub_id,
+                                        sub_label,
+                                        sub_default,
+                                    ) in MZMINE_SUBSTEPS[row_start : row_start + 3]:
+                                        yield Checkbox(
+                                            sub_label, value=sub_default, id=sub_id
+                                        )
 
             # ---- Action bar -----------------------------------------
             yield Static("", id="validation-msg")
@@ -869,44 +1246,106 @@ class ConfigScreen(Screen):
 
     def on_mount(self) -> None:
         """Call on_mount to refresh status or set initial state."""
+        self._selected_tasks: set[str] = set(sorted(TASK_PARAMS.keys()))
+        self._filter_text: str = ""
         # Ensure we have a valid task file selected in UI
         if TASK_FILES:
             sl = self.query_one("#task-file-list", SelectionList)
             sl.select(str(_TASKS_FILE))
+        # Check which spectral libraries are already present
+        if LIBRARY_PACKAGES:
+            self._refresh_library_statuses()
+        # Check software status
+        self._check_software_status()
+        self._update_dataset_count()
+        # Initialize dataset details with first task
+        if TASK_PARAMS:
+            first_task = next(iter(sorted(TASK_PARAMS.keys())))
+            try:
+                self.query_one("#dataset-details", Static).update(
+                    self._format_task_details(first_task)
+                )
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Event handlers
     # ------------------------------------------------------------------
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "dl-all-software":
+            self._download_all_software()
+            return
+        if event.button.id == "dl-all-libraries":
+            self._download_all_libraries()
+            return
+        if event.button.id == "lib-select-all":
+            for chk in self.query(".library-checkbox").results(Checkbox):
+                if not chk.disabled:
+                    chk.value = True
+            return
+        if event.button.id == "lib-deselect-all":
+            for chk in self.query(".library-checkbox").results(Checkbox):
+                if not chk.disabled:
+                    chk.value = False
+            return
+
         if event.button.id and event.button.id.startswith("dl-"):
             name_id = event.button.id[3:]
-            # Find the original name from SOFTWARE_PACKAGES
-            target_name = None
-            for name in SOFTWARE_PACKAGES:
-                if name.replace(" ", "-").replace(".", "-").lower() == name_id:
-                    target_name = name
+            # Find the original version from SOFTWARE_PACKAGES
+            target_version = None
+            for version in SOFTWARE_PACKAGES:
+                if _software_id(version) == name_id:
+                    target_version = version
                     break
-            if target_name:
-                self._download_software(target_name)
+            if target_version:
+                self._download_software(target_version)
+            return
+
+        if event.button.id and event.button.id.startswith("lib-collection-dl-"):
+            # Download all files in a library collection
+            lib_idx_str = event.button.id.replace("lib-collection-dl-", "")
+            try:
+                lib_idx = int(lib_idx_str)
+                lib_items = list(LIBRARY_PACKAGES.items())
+                if 0 <= lib_idx < len(lib_items):
+                    lib_name, lib_urls = lib_items[lib_idx]
+                    self._download_library_collection(lib_idx, lib_name, lib_urls)
+            except (ValueError, IndexError):
+                pass
+            return
+
+        if event.button.id and event.button.id.startswith("lib-url-dl-"):
+            # Parse lib-url-dl-{lib_idx}-{url_idx}
+            parts = event.button.id.replace("lib-url-dl-", "").split("-")
+            if len(parts) >= 2:
+                try:
+                    lib_idx = int(parts[0])
+                    url_idx = int(parts[1])
+                    lib_items = list(LIBRARY_PACKAGES.items())
+                    if 0 <= lib_idx < len(lib_items):
+                        lib_name, lib_urls = lib_items[lib_idx]
+                        if 0 <= url_idx < len(lib_urls):
+                            lib_url = lib_urls[url_idx]
+                            self._download_library(lib_idx, url_idx, lib_name, lib_url)
+                except (ValueError, IndexError):
+                    pass
             return
 
         if event.button.id == "sel-all":
-            sl = self.query_one("#dataset-list", SelectionList)
-            for task in sorted(TASK_PARAMS.keys()):
-                sl.select(task)
+            self._selected_tasks = set(sorted(TASK_PARAMS.keys()))
+            self._apply_dataset_filter()
             return
         if event.button.id == "sel-none":
-            sl = self.query_one("#dataset-list", SelectionList)
-            for task in sorted(TASK_PARAMS.keys()):
-                sl.deselect(task)
+            self._selected_tasks = set()
+            self._apply_dataset_filter()
             return
         if event.button.id == "start-btn":
             self._start_processing()
 
     @work(thread=True)
-    def _download_software(self, name: str) -> None:
-        name_id = name.replace(" ", "-").replace(".", "-").lower()
+    def _download_software(self, version: str) -> None:
+        name_id = _software_id(version)
         btn = self.query_one(f"#dl-{name_id}", Button)
         status = self.query_one(f"#status-{name_id}", Static)
 
@@ -916,35 +1355,318 @@ class ConfigScreen(Screen):
         def log_fn(msg):
             self.app.call_from_thread(status.update, msg)
 
-        success = download_and_unpack(name, log_fn)
+        success = download_and_unpack(version, log_fn)
 
         self.app.call_from_thread(btn.set_loading, False)
         if success:
-            info = SOFTWARE_PACKAGES[name]
-            path = SOFTWARE_DIR / info["folder"] / info["mzmine_executable"]
-            self.app.call_from_thread(status.update, f"Installed: {path.name}")
+            info = get_software_package(version)
+            if not info:
+                self.app.call_from_thread(status.update, "[red]Download failed[/red]")
+                return
+            path = SOFTWARE_DIR / info["folder"] / info["executable"]
+            self.app.call_from_thread(
+                status.update, f"[green]Installed: {path.name}[/green]"
+            )
             self.app.call_from_thread(setattr, btn, "label", "Redownload")
             self.app.call_from_thread(setattr, btn, "variant", "default")
         else:
-            self.app.call_from_thread(status.update, "Download failed")
+            self.app.call_from_thread(status.update, "[red]Download failed[/red]")
+
+    # ------------------------------------------------------------------
+    # Library workers
+    # ------------------------------------------------------------------
+
+    @work(thread=True)
+    @work(thread=True)
+    def _refresh_library_statuses(self) -> None:
+        """Check every library entry and update its status widget."""
+        lib_idx = 0
+        for lib_name, lib_urls in LIBRARY_PACKAGES.items():
+            for url_idx, lib_url in enumerate(lib_urls):
+                self._set_library_status(lib_idx, url_idx, lib_name, lib_url)
+            lib_idx += 1
+
+    def _set_library_status(
+        self, lib_idx: int, url_idx: int, lib_name: str, url: str
+    ) -> None:
+        """Update one URL's status widget and checkbox."""
+        status = self.query_one(f"#lib-url-status-{lib_idx}-{url_idx}", Static)
+        btn = self.query_one(f"#lib-url-dl-{lib_idx}-{url_idx}", Button)
+        chk = self.query_one(f"#lib-url-chk-{lib_idx}-{url_idx}", Checkbox)
+        lib_file = find_library_file(url)
+
+        if lib_file is None:
+            self.app.call_from_thread(status.update, "[red]Missing[/red]")
+            self.app.call_from_thread(setattr, btn, "variant", "primary")
+            self.app.call_from_thread(setattr, btn, "label", "Download")
+            self.app.call_from_thread(setattr, chk, "disabled", True)
+            self.app.call_from_thread(setattr, chk, "value", False)
+        else:
+            self.app.call_from_thread(status.update, "Counting entries…")
+            count = count_library_entries(lib_file)
+            if count is not None:
+                self.app.call_from_thread(
+                    status.update, f"[green]Downloaded[/green]  ({count:,} entries)"
+                )
+            else:
+                size_mb = lib_file.stat().st_size / 1024 / 1024
+                self.app.call_from_thread(
+                    status.update,
+                    f"[green]Downloaded[/green]  ({size_mb:.1f} MB)",
+                )
+            self.app.call_from_thread(setattr, btn, "label", "Re-download")
+            self.app.call_from_thread(setattr, btn, "variant", "default")
+            # Enable individual file checkbox
+            self.app.call_from_thread(setattr, chk, "disabled", False)
+            self.app.call_from_thread(setattr, chk, "value", True)
+
+    @work(thread=True)
+    def _download_library(
+        self, lib_idx: int, url_idx: int, lib_name: str, lib_url: str
+    ) -> None:
+        """Download a single spectral library URL in the background."""
+        status = self.query_one(f"#lib-url-status-{lib_idx}-{url_idx}", Static)
+        btn = self.query_one(f"#lib-url-dl-{lib_idx}-{url_idx}", Button)
+
+        self.app.call_from_thread(btn.set_loading, True)
+        self.app.call_from_thread(status.update, "[yellow]Downloading…[/yellow]")
+
+        def log_fn(msg: str) -> None:
+            self.app.call_from_thread(status.update, f"[yellow]{msg}[/yellow]")
+
+        success = download_library(lib_name, lib_url, log_fn)
+
+        self.app.call_from_thread(btn.set_loading, False)
+        if success:
+            self._set_library_status(lib_idx, url_idx, lib_name, lib_url)
+        else:
+            self.app.call_from_thread(status.update, "[red]Download failed[/red]")
+            self.app.call_from_thread(setattr, btn, "variant", "primary")
+            self.app.call_from_thread(setattr, btn, "label", "Download")
+
+    @work(thread=True)
+    def _download_all_software(self) -> None:
+        """Download all software packages sequentially."""
+        for version, info in SOFTWARE_PACKAGES.items():
+            name_id = _software_id(version)
+            btn = self.query_one(f"#dl-{name_id}", Button)
+            status = self.query_one(f"#status-{name_id}", Static)
+            self.app.call_from_thread(btn.set_loading, True)
+            self.app.call_from_thread(status.update, "Downloading…")
+
+            def log_fn(msg: str, _status: Static = status) -> None:
+                self.app.call_from_thread(_status.update, msg)
+
+            success = download_and_unpack(version, log_fn)
+            self.app.call_from_thread(btn.set_loading, False)
+            if success:
+                path = SOFTWARE_DIR / info["folder"] / info["executable"]
+                self.app.call_from_thread(
+                    status.update, f"[green]Installed: {path.name}[/green]"
+                )
+                self.app.call_from_thread(setattr, btn, "label", "Redownload")
+                self.app.call_from_thread(setattr, btn, "variant", "default")
+            else:
+                self.app.call_from_thread(status.update, "[red]Download failed[/red]")
+
+    @work(thread=True)
+    def _download_all_libraries(self) -> None:
+        """Download all spectral library URLs sequentially."""
+        lib_idx = 0
+        for lib_name, lib_urls in LIBRARY_PACKAGES.items():
+            for url_idx, lib_url in enumerate(lib_urls):
+                status = self.query_one(f"#lib-url-status-{lib_idx}-{url_idx}", Static)
+                btn = self.query_one(f"#lib-url-dl-{lib_idx}-{url_idx}", Button)
+                self.app.call_from_thread(btn.set_loading, True)
+                self.app.call_from_thread(
+                    status.update, "[yellow]Downloading…[/yellow]"
+                )
+
+                def log_fn(msg: str, _status: Static = status) -> None:
+                    self.app.call_from_thread(_status.update, f"[yellow]{msg}[/yellow]")
+
+                success = download_library(lib_name, lib_url, log_fn)
+                self.app.call_from_thread(btn.set_loading, False)
+                if success:
+                    self._set_library_status(lib_idx, url_idx, lib_name, lib_url)
+                else:
+                    self.app.call_from_thread(
+                        status.update, "[red]Download failed[/red]"
+                    )
+                    self.app.call_from_thread(setattr, btn, "variant", "primary")
+                    self.app.call_from_thread(setattr, btn, "label", "Download")
+            lib_idx += 1
+
+    @work(thread=True)
+    def _download_library_collection(
+        self, lib_idx: int, lib_name: str, lib_urls: list[str]
+    ) -> None:
+        """Download all files in a library collection sequentially."""
+        for url_idx, lib_url in enumerate(lib_urls):
+            status = self.query_one(f"#lib-url-status-{lib_idx}-{url_idx}", Static)
+            btn = self.query_one(f"#lib-url-dl-{lib_idx}-{url_idx}", Button)
+            self.app.call_from_thread(btn.set_loading, True)
+            self.app.call_from_thread(status.update, "[yellow]Downloading…[/yellow]")
+
+            def log_fn(msg: str, _status: Static = status) -> None:
+                self.app.call_from_thread(_status.update, f"[yellow]{msg}[/yellow]")
+
+            success = download_library(lib_name, lib_url, log_fn)
+            self.app.call_from_thread(btn.set_loading, False)
+            if success:
+                self._set_library_status(lib_idx, url_idx, lib_name, lib_url)
+            else:
+                self.app.call_from_thread(status.update, "[red]Download failed[/red]")
+                self.app.call_from_thread(setattr, btn, "variant", "primary")
+                self.app.call_from_thread(setattr, btn, "label", "Download")
+
+    @work(thread=True)
+    def _check_software_status(self) -> None:
+        """Check software installation status and update buttons."""
+        for version, info in SOFTWARE_PACKAGES.items():
+            name_id = _software_id(version)
+            status = self.query_one(f"#status-{name_id}", Static)
+            btn = self.query_one(f"#dl-{name_id}", Button)
+
+            path = SOFTWARE_DIR / info["folder"] / info["executable"]
+            exists = path.exists()
+
+            if exists:
+                self.app.call_from_thread(
+                    status.update, f"[green]Installed: {path.name}[/green]"
+                )
+                self.app.call_from_thread(setattr, btn, "label", "Redownload")
+            else:
+                self.app.call_from_thread(status.update, "[red]Not installed[/red]")
+                self.app.call_from_thread(setattr, btn, "label", "Download")
+                self.app.call_from_thread(setattr, btn, "variant", "primary")
+
+    def on_input_changed(self, event: "Input.Changed") -> None:
+        """Filter dataset list when the filter input changes."""
+        if event.input.id != "dataset-filter":
+            return
+        self._filter_text = event.value.lower()
+        self._apply_dataset_filter()
+
+    def _apply_dataset_filter(self) -> None:
+        """Rebuild the dataset list according to the current filter text."""
+        sl = self.query_one("#dataset-list", SelectionList)
+        sl.clear_options()
+        matching_tasks = [
+            task
+            for task in sorted(TASK_PARAMS.keys())
+            if self._filter_text in task.lower()
+        ]
+        for task in matching_tasks:
+            sl.add_option(Selection(task, task, task in self._selected_tasks))
+        self._update_dataset_count()
+        # Update details with first matching task or clear if no matches
+        if matching_tasks:
+            first_match = matching_tasks[0]
+            try:
+                self.query_one("#dataset-details", Static).update(
+                    self._format_task_details(first_match)
+                )
+            except Exception:
+                pass
+        else:
+            try:
+                self.query_one("#dataset-details", Static).update(
+                    "No matching datasets."
+                )
+            except Exception:
+                pass
+
+    def _update_dataset_count(self) -> None:
+        """Refresh the selected / not-selected count label."""
+        total = len(TASK_PARAMS)
+        selected = len(self._selected_tasks)
+        try:
+            self.query_one("#dataset-count", Static).update(
+                f"Selected: {selected}  ·  Not selected: {total - selected}  ·  Total: {total}"
+            )
+        except Exception:
+            pass
+
+    def _reload_tasks_from_file(self, task_file: Path) -> None:
+        """Reload TASK_PARAMS from *task_file* and refresh the dataset list."""
+        global TASK_PARAMS, _TASKS_FILE
+        _TASKS_FILE = task_file
+        TASK_PARAMS = load_tasks(_TASKS_FILE)
+        self._selected_tasks = set(sorted(TASK_PARAMS.keys()))
+        self._filter_text = ""
+        try:
+            self.query_one("#dataset-filter", Input).value = ""
+        except Exception:
+            pass
+        sl = self.query_one("#dataset-list", SelectionList)
+        sl.clear_options()
+        for task in sorted(TASK_PARAMS.keys()):
+            sl.add_option(Selection(task, task, True))
+        self._update_dataset_count()
+        if TASK_PARAMS:
+            first_task = next(iter(sorted(TASK_PARAMS.keys())))
+            try:
+                self.query_one("#dataset-details", Static).update(
+                    self._format_task_details(first_task)
+                )
+            except Exception:
+                pass
+
+    def _format_task_details(self, task: str) -> str:
+        """Format task parameters for the details panel."""
+        params = TASK_PARAMS.get(task, {})
+        lines = [f"[bold]{task}[/bold]", ""]
+        for key, val in params.items():
+            lines.append(f"[dim]{key}:[/dim]  {val}")
+            # If this is input_files, try to count the lines in the file
+            if key == "input_files" and val:
+                try:
+                    input_file_path = Path(val)
+                    if input_file_path.exists() and input_file_path.is_file():
+                        with open(input_file_path, "r") as f:
+                            line_count = sum(1 for _ in f)
+                        lines.append(f"[dim]  → {line_count} input files[/dim]")
+                except Exception:
+                    pass
+        return "\n".join(lines)
 
     def on_selection_list_selected_changed(
         self, event: SelectionList.SelectedChanged
     ) -> None:
         if event.selection_list.id == "task-file-list":
-            if event.selection_list.selected:
-                global TASK_PARAMS, _TASKS_FILE
-                _TASKS_FILE = Path(event.selection_list.selected[0])
-                TASK_PARAMS = load_tasks(_TASKS_FILE)
-                # Update dataset list
-                sl = self.query_one("#dataset-list", SelectionList)
-                sl.clear_options()
-                for task in sorted(TASK_PARAMS.keys()):
-                    sl.add_option(Selection(task, task, True))
+            selected = event.selection_list.selected
+            if selected:
+                task_file_value = next(iter(selected))
+                self._reload_tasks_from_file(Path(task_file_value))
+        elif event.selection_list.id == "dataset-list":
+            # Sync _selected_tasks for visible items, preserving filtered-out items
+            visible_tasks = {
+                task for task in TASK_PARAMS.keys() if self._filter_text in task.lower()
+            }
+            selected_in_list = set(event.selection_list.selected)
+            self._selected_tasks = (
+                self._selected_tasks - visible_tasks
+            ) | selected_in_list
+            self._update_dataset_count()
+
+    def on_selection_list_selection_highlighted(
+        self, event: SelectionList.SelectionHighlighted
+    ) -> None:
+        """Update dataset details when cursor navigates the dataset list."""
+        if event.selection_list.id == "dataset-list":
+            if event.selection:
+                task_key = event.selection.value
+                if task_key in TASK_PARAMS:
+                    try:
+                        self.query_one("#dataset-details", Static).update(
+                            self._format_task_details(task_key)
+                        )
+                    except Exception:
+                        pass
 
     def _start_processing(self) -> None:
-        sl = self.query_one("#dataset-list", SelectionList)
-        selected_tasks: list[str] = list(sl.selected)
+        selected_tasks: list[str] = sorted(self._selected_tasks)
 
         msg_widget = self.query_one("#validation-msg", Static)
 
@@ -965,13 +1687,13 @@ class ConfigScreen(Screen):
         # We'll just pick the first installed MZmine and SIRIUS
         def_mzmine = ""
         def_sirius = ""
-        for name, info in SOFTWARE_PACKAGES.items():
-            path = SOFTWARE_DIR / info["folder"] / info["mzmine_executable"]
+        for version, info in SOFTWARE_PACKAGES.items():
+            path = SOFTWARE_DIR / info["folder"] / info["executable"]
             if path.exists():
-                if "MZmine" in name and not def_mzmine:
-                    def_mzmine = str(path)
-                elif "SIRIUS" in name and not def_sirius:
-                    def_sirius = str(path)
+                if info.get("product") == "MZmine" and not def_mzmine:
+                    def_mzmine = version
+                elif info.get("product") == "SIRIUS" and not def_sirius:
+                    def_sirius = version
 
         if not def_mzmine and self.query_one("#proc_mzmine", Checkbox).value:
             msg_widget.update("MZmine not found. Please download it first.")
@@ -982,15 +1704,31 @@ class ConfigScreen(Screen):
 
         msg_widget.update("")
 
+        # Collect selected spectral library file paths
+        selected_library_paths: list[str] = []
+        lib_idx = 0
+        for lib_name, lib_urls in LIBRARY_PACKAGES.items():
+            for url_idx, lib_url in enumerate(lib_urls):
+                try:
+                    chk = self.query_one(f"#lib-url-chk-{lib_idx}-{url_idx}", Checkbox)
+                    if chk.value and not chk.disabled:
+                        lib_file = find_library_file(lib_url)
+                        if lib_file is not None:
+                            selected_library_paths.append(str(lib_file))
+                except Exception:
+                    pass
+            lib_idx += 1
+
         config = {
             # Paths
             "outdir": self.query_one("#outdir", Input).value.strip(),
-            "mzmine": def_mzmine,
-            "sirius": def_sirius,
+            "mzmine_version": def_mzmine,
+            "sirius_version": def_sirius,
             "util_mgftools_dir": DEFAULT_UTIL_MGFTOOLS,
             "util_fragextract_exe": DEFAULT_UTIL_FRAGEXTRACT,
             "meii_ref_file": DEFAULT_MEII_REF,
             "util_reorder_dir": DEFAULT_UTIL_REORDER,
+            "library_paths": selected_library_paths,
             # Datasets
             "tasks": sorted(selected_tasks),
             # Main steps
@@ -1026,7 +1764,7 @@ class ProcessingScreen(Screen):
         background: $surface;
     }
 
-    #log {
+    #pipeline-log {
         height: 1fr;
         border: none;
         padding: 0 1;
@@ -1065,7 +1803,7 @@ class ProcessingScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield RichLog(id="log", highlight=True, markup=False, wrap=True)
+        yield RichLog(id="pipeline-log", highlight=True, markup=False, wrap=True)
         with Horizontal(id="status-bar"):
             yield Static("Running …", id="status-label")
             yield Button(
@@ -1074,15 +1812,14 @@ class ProcessingScreen(Screen):
             yield Button("Exit", id="exit-btn", variant="error", disabled=True)
 
     def on_mount(self) -> None:
-        log = self.query_one("#log", RichLog)
+        log = self.query_one("#pipeline-log", RichLog)
         log.write(
             f"Untargeted Metabolomics Pipeline – started {datetime.now():%Y-%m-%d %H:%M:%S}"
         )
-        log.write(f"Output directory : {self._config['outdir']}")
-        log.write(f"Selected datasets: {', '.join(self._config['tasks'])}")
+        log.write(f"Output: {self._config['outdir']}")
+        log.write(f"Datasets: {', '.join(self._config['tasks'])}")
         log.write(
-            f"Steps            : "
-            f"MZmine={'yes' if self._config['proc_mzmine'] else 'no'}  "
+            f"Steps: MZmine={'yes' if self._config['proc_mzmine'] else 'no'}  "
             f"SIRIUS={'yes' if self._config['proc_sirius'] else 'no'}  "
             f"Archive={'yes' if self._config['archive_results'] else 'no'}"
         )
@@ -1093,15 +1830,20 @@ class ProcessingScreen(Screen):
     # Background worker
     # ------------------------------------------------------------------
 
+    def _log_fn(self, text: str) -> None:
+        self.app.call_from_thread(self._write_log, text)
+
+    def _write_log(self, text: str) -> None:
+        try:
+            log = self.query_one("#pipeline-log", RichLog)
+            log.write(text)
+            log.scroll_end(animate=False)
+        except Exception:
+            pass
+
     @work(thread=True)
     def _run_pipeline(self) -> None:
-        log: RichLog = self.query_one("#log", RichLog)
-
-        def log_fn(text: str) -> None:
-            self.app.call_from_thread(log.write, text)
-
-        run_all(self._config, log_fn)
-
+        run_all(self._config, self._log_fn)
         self._done = True
         self.app.call_from_thread(self._on_pipeline_done)
 
@@ -1133,7 +1875,7 @@ class ProcessingScreen(Screen):
 class PipelineApp(App):
     """Untargeted Metabolomics Pipeline TUI."""
 
-    TITLE = "Untargeted Metabolomics Pipeline"
+    TITLE = f"Untargeted Metabolomics Pipeline v{PROJECT_VERSION}"
     SUB_TITLE = "MZmine · SIRIUS"
 
     BINDINGS = [

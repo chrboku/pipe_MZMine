@@ -12,3 +12,4 @@ wheels/
 # Used software tools
 mzmine_Windows_*
 sirius-*
+libraries/*

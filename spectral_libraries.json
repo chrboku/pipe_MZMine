@@ -1,0 +1,25 @@
+{
+    "MassBank EU - Rikenformat (msp)": "https://github.com/MassBank/MassBank-data/releases/download/2026.03/MassBank_RIKENformat.msp",
+    "GNPS Natural Products Library (mgf)": "https://external.gnps2.org/gnpslibrary/GNPS-NIH-NATURALPRODUCTSLIBRARY.mgf",
+    "BOKU - IBAM": "http://141.244.29.120/MassBank-data/MassBank_BOKU_iBAM.mgf",
+    "MSn Lib": [
+        "https://zenodo.org/records/16984129/files/20241003_enamdisc_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_enamdisc_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_enammol_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_enammol_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_mcebio_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_mcebio_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_mcedrug_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_mcedrug_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_mcescaf_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_mcescaf_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_nihnp_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_nihnp_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_otavapep_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20241003_otavapep_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20250828_mcediv_50k_sub_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20250828_mcediv_50k_sub_pos_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20250828_targetmol_hts_np_neg_ms2.mgf?download=1",
+        "https://zenodo.org/records/16984129/files/20250828_targetmol_hts_np_pos_ms2.mgf?download=1"
+    ]
+}

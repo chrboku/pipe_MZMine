@@ -1,0 +1,30 @@
+{
+    "4.10.6": {
+        "product": "MZmine",
+        "display_name": "MZmine 4.10.6",
+        "url": "https://github.com/mzmine/mzmine/releases/download/v4.10.6/mzmine_Windows_portable-4.10.6.zip",
+        "folder": "mzmine_Windows_portable-4.10.6",
+        "executable": "mzmine_console.exe"
+    },
+    "4.5.20": {
+        "product": "MZmine",
+        "display_name": "MZmine 4.5.20",
+        "url": "https://github.com/mzmine/mzmine/releases/download/v4.5.20/mzmine_Windows_portable-4.5.20.zip",
+        "folder": "mzmine_Windows_portable-4.5.20",
+        "executable": "mzmine_console.exe"
+    },
+    "6.2.2": {
+        "product": "SIRIUS",
+        "display_name": "SIRIUS 6.2.2",
+        "url": "https://github.com/sirius-ms/sirius/releases/download/v6.2.2/sirius-6.2.2-win-x64.zip",
+        "folder": "sirius-6.2.2-win-x64",
+        "executable": "sirius\\sirius.bat"
+    },
+    "6.3.7": {
+        "product": "SIRIUS",
+        "display_name": "SIRIUS 6.3.7",
+        "url": "https://github.com/sirius-ms/sirius/releases/download/v6.3.7/sirius-6.3.7-win-x64.zip",
+        "folder": "sirius-6.3.7-win-x64",
+        "executable": "sirius\\sirius.bat"
+    }
+}
