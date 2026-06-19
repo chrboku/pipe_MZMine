@@ -206,6 +206,7 @@ FEATURE_RENAME_SCRIPT = _SCRIPTS / "rename_MZMine_results.py"
 MGF_FIX_SCRIPT = _SCRIPTS / "fix_SIRIUS_mgfs.py"
 DDA_INCLUSION_LIST_SCRIPT = _SCRIPTS / "create_DDA_inclusion_list.py"
 COMBINE_EXPERIMENTS_SCRIPT = _SCRIPTS / "combineMZMineWithMEII.py"
+QC_ANALYSIS_SCRIPT = _SCRIPTS / "qc_analysis.py"
 
 # Default paths for optional external tools (all disabled / empty by default)
 DEFAULT_UTIL_MGFTOOLS = r"C:\development\util_MGFTools"
@@ -223,9 +224,17 @@ TASK_FILES = sorted(list(SCRIPT_DIR.glob("tasks*.json")))
 
 def load_tasks(file_path: Path) -> dict[str, dict]:
     try:
-        return json.loads(file_path.read_text(encoding="utf-8-sig"))
+        raw = json.loads(file_path.read_text(encoding="utf-8-sig"))
     except Exception:
         return {}
+    # Extract optional $$defaults$$ entry and apply to all datasets
+    defaults = raw.pop("$$defaults$$", {})
+    result: dict[str, dict] = {}
+    for key, value in raw.items():
+        if key.startswith("$$") and key.endswith("$$"):
+            continue  # skip any other special sentinel keys
+        result[key] = {**defaults, **value}
+    return result
 
 
 # We'll initialize these later in the App if needed,
@@ -254,6 +263,7 @@ MZMINE_SUBSTEPS = [
     ("step_reorder_table", "1.5  Reorder table", False),
     ("step_dda_list", "1.6  Create DDA inclusion list", True),
     ("step_csv_to_tsv", "1.7  Convert CSV \u2192 TSV", True),
+    ("step_qc_analysis", "1.8  QC group analysis", True),
 ]
 
 # ---------------------------------------------------------------------------
@@ -494,7 +504,7 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         if config.get("step_rename_ids", True):
             log_fn("\n[Step 1.1] Renaming feature IDs ...")
             rename_log = _tool_log_file(outdir, 2, "rename_feature_ids")
-            for f in ["__full_feature_table.csv", "__iimn_fbmn.mgf", "__sirius.mgf"]:
+            for f in ["__iimn_fbmn_quant.csv", "__iimn_fbmn.mgf", "__sirius.mgf"]:
                 src = str(outdir / f"{task}{f}")
                 dest = str(outdir / f"{task}_4GNPS_{f}")
                 # copy file
@@ -725,6 +735,40 @@ def process_task(task: str, config: dict, log_fn) -> bool:
                     log_fn(f"    (skipping {csv_p.name} \u2013 not found)")
         else:
             log_fn("[Step 1.7] Skipped.")
+
+        # --- 1.8 QC group analysis ---
+        if config.get("step_qc_analysis", True):
+            qc_groups = params.get("qc_groups")
+            if qc_groups:
+                log_fn("\n[Step 1.8] Running QC group analysis ...")
+                qc_log = _tool_log_file(outdir, 15, "qc_analysis")
+                feature_table = outdir / f"{task}__full_feature_table.csv"
+                if feature_table.exists():
+                    _run_command(
+                        [
+                            "uv",
+                            "run",
+                            str(QC_ANALYSIS_SCRIPT),
+                            "--feature_table",
+                            str(feature_table),
+                            "--qc_groups",
+                            json.dumps(qc_groups),
+                            "--output_dir",
+                            str(outdir / "qc_analysis"),
+                        ],
+                        log_fn,
+                        qc_log,
+                        cwd=SCRIPT_DIR,
+                    )
+                else:
+                    log_fn(
+                        f"  WARNING – feature table not found for QC: {feature_table}"
+                    )
+            else:
+                log_fn("[Step 1.8] No qc_groups defined for this task; skipping.")
+        else:
+            log_fn("[Step 1.8] Skipped.")
+
     else:
         log_fn("[Step 1] MZmine skipped.")
 

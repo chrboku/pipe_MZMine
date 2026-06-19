@@ -1,254 +1,161 @@
 ﻿{
-    "data_MS1_AndropogonGeradii_pos":  {
-                                           "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                           "polarity":  "positive",
-                                           "input_files":  "../samples_AndropogonGeradii_pos.txt",
-                                           "mzmine_version":  "4.10.6",
-                                           "sirius_version":  "6.2.2"
-                                       },
-    "data_MS1_CichoriumIntybus_pos":  {
-                                          "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                          "polarity":  "positive",
-                                          "input_files":  "../input_MS1_CichoriumIntybus_pos.txt",
-                                          "mzmine_version":  "4.10.6",
-                                          "sirius_version":  "6.2.2"
-                                      },
-    "data_MS1_Leeks_pos":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "positive",
-                               "input_files":  "../input_MS1_Leeks_pos.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_Maize_pos":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "positive",
-                               "input_files":  "../input_MS1_Maize_pos.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_SorghumBicolor_pos":  {
-                                        "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                        "polarity":  "positive",
-                                        "input_files":  "../input_MS1_SorghumBicolor_pos.txt",
-                                        "mzmine_version":  "4.10.6",
-                                        "sirius_version":  "6.2.2"
-                                    },
-    "data_MS1_SunflowerHelianthus_pos":  {
-                                             "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                             "polarity":  "positive",
-                                             "input_files":  "../input_MS1_SunflowerHelianthus_pos.txt",
-                                             "mzmine_version":  "4.10.6",
-                                             "sirius_version":  "6.2.2"
-                                         },
-    "data_MS1_terra_pos":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "positive",
-                               "input_files":  "../input_MS1_terra_pos.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_fungi_pos":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "positive",
-                               "input_files":  "../input_MS1_fungi_pos.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_all_pos":  {
-                             "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                             "polarity":  "positive",
-                             "input_files":  "../input_MS1_all_pos.txt",
-                             "mzmine_version":  "4.10.6",
-                             "sirius_version":  "6.2.2"
-                         },
-    "data_MS1_AndropogonGeradii_neg":  {
-                                           "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                           "polarity":  "negative",
-                                           "input_files":  "../input_MS1_AndropogonGeradii_neg.txt",
-                                           "mzmine_version":  "4.10.6",
-                                           "sirius_version":  "6.2.2"
-                                       },
-    "data_MS1_CichoriumIntybus_neg":  {
-                                          "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                          "polarity":  "negative",
-                                          "input_files":  "../input_MS1_CichoriumIntybus_neg.txt",
-                                          "mzmine_version":  "4.10.6",
-                                          "sirius_version":  "6.2.2"
-                                      },
-    "data_MS1_Leeks_neg":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "negative",
-                               "input_files":  "../input_MS1_Leeks_neg.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_Maize_neg":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "negative",
-                               "input_files":  "../input_MS1_Maize_neg.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_SorghumBicolor_neg":  {
-                                        "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                        "polarity":  "negative",
-                                        "input_files":  "../input_MS1_SorghumBicolor_neg.txt",
-                                        "mzmine_version":  "4.10.6",
-                                        "sirius_version":  "6.2.2"
-                                    },
-    "data_MS1_SunflowerHelianthus_neg":  {
-                                             "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                                             "polarity":  "negative",
-                                             "input_files":  "../input_MS1_SunflowerHelianthus_neg.txt",
-                                             "mzmine_version":  "4.10.6",
-                                             "sirius_version":  "6.2.2"
-                                         },
-    "data_MS1_terra_neg":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "negative",
-                               "input_files":  "../input_MS1_terra_neg.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_fungi_neg":  {
-                               "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                               "polarity":  "negative",
-                               "input_files":  "../input_MS1_fungi_neg.txt",
-                               "mzmine_version":  "4.10.6",
-                               "sirius_version":  "6.2.2"
-                           },
-    "data_MS1_all_neg":  {
-                             "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP.mzbatch",
-                             "polarity":  "negative",
-                             "input_files":  "../input_MS1_all_neg.txt",
-                             "mzmine_version":  "4.10.6",
-                             "sirius_version":  "6.2.2"
-                         },
-    "data_MS1MS2_AndropogonGeradii_pos":  {
-                                              "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                              "polarity":  "positive",
-                                              "input_files":  "../samples_AndropogonGeradii_posMode.txt",
-                                              "mzmine_version":  "4.10.6",
-                                              "sirius_version":  "6.2.2"
-                                          },
-    "data_MS1MS2_CichoriumIntybus_pos":  {
-                                             "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                             "polarity":  "positive",
-                                             "input_files":  "../samples_CichoriumIntybus_posMode.txt",
-                                             "mzmine_version":  "4.10.6",
-                                             "sirius_version":  "6.2.2"
-                                         },
-    "data_MS1MS2_Leeks_pos":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "positive",
-                                  "input_files":  "../samples_Leeks_posMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_Maize_pos":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "positive",
-                                  "input_files":  "../samples_Maize_posMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_SorghumBicolor_pos":  {
-                                           "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                           "polarity":  "positive",
-                                           "input_files":  "../samples_SorghumBicolor_posMode.txt",
-                                           "mzmine_version":  "4.10.6",
-                                           "sirius_version":  "6.2.2"
-                                       },
-    "data_MS1MS2_SunflowerHelianthus_pos":  {
-                                                "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                                "polarity":  "positive",
-                                                "input_files":  "../samples_SunflowerHelianthus_posMode.txt",
-                                                "mzmine_version":  "4.10.6",
-                                                "sirius_version":  "6.2.2"
-                                            },
-    "data_MS1MS2_terra_pos":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "positive",
-                                  "input_files":  "../samples_terra_posMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_fungi_pos":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "positive",
-                                  "input_files":  "../samples_fungi_posMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_all_pos":  {
-                                "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                "polarity":  "positive",
-                                "input_files":  "../samples_all_posMode.txt",
-                                "mzmine_version":  "4.10.6",
-                                "sirius_version":  "6.2.2"
-                            },
-    "data_MS1MS2_AndropogonGeradii_neg":  {
-                                              "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                              "polarity":  "negative",
-                                              "input_files":  "../samples_AndropogonGeradii_negMode.txt",
-                                              "mzmine_version":  "4.10.6",
-                                              "sirius_version":  "6.2.2"
-                                          },
-    "data_MS1MS2_CichoriumIntybus_neg":  {
-                                             "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                             "polarity":  "negative",
-                                             "input_files":  "../samples_CichoriumIntybus_negMode.txt",
-                                             "mzmine_version":  "4.10.6",
-                                             "sirius_version":  "6.2.2"
-                                         },
-    "data_MS1MS2_Leeks_neg":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "negative",
-                                  "input_files":  "../samples_Leeks_negMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_Maize_neg":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "negative",
-                                  "input_files":  "../samples_Maize_negMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_SorghumBicolor_neg":  {
-                                           "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                           "polarity":  "negative",
-                                           "input_files":  "../samples_SorghumBicolor_negMode.txt",
-                                           "mzmine_version":  "4.10.6",
-                                           "sirius_version":  "6.2.2"
-                                       },
-    "data_MS1MS2_SunflowerHelianthus_neg":  {
-                                                "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                                "polarity":  "negative",
-                                                "input_files":  "../samples_SunflowerHelianthus_negMode.txt",
-                                                "mzmine_version":  "4.10.6",
-                                                "sirius_version":  "6.2.2"
-                                            },
-    "data_MS1MS2_terra_neg":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "negative",
-                                  "input_files":  "../samples_terra_negMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_fungi_neg":  {
-                                  "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                  "polarity":  "negative",
-                                  "input_files":  "../samples_fungi_negMode.txt",
-                                  "mzmine_version":  "4.10.6",
-                                  "sirius_version":  "6.2.2"
-                              },
-    "data_MS1MS2_all_neg":  {
-                                "MZmine_batch":  "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
-                                "polarity":  "negative",
-                                "input_files":  "../samples_all_negMode.txt",
-                                "mzmine_version":  "4.10.6",
-                                "sirius_version":  "6.2.2"
-                            }
+    "$$defaults$$": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP.mzbatch",
+        "polarity": "positive",
+        "mzmine_version": "4.10.6",
+        "sirius_version": "6.2.2",
+        "qc_groups": {
+            "qcs": [
+                ".*QC_[0-9]+\\.mzML"
+            ]
+        }
+    },
+    
+    "data_MS1_AndropogonGeradii_pos": {
+        "input_files": "../samples_AndropogonGeradii_pos.txt"
+    },
+    "data_MS1_CichoriumIntybus_pos": {
+        "input_files": "../input_MS1_CichoriumIntybus_pos.txt"
+    },
+    "data_MS1_Leeks_pos": {
+        "input_files": "../input_MS1_Leeks_pos.txt"
+    },
+    "data_MS1_Maize_pos": {
+        "input_files": "../input_MS1_Maize_pos.txt"
+    },
+    "data_MS1_SorghumBicolor_pos": {
+        "input_files": "../input_MS1_SorghumBicolor_pos.txt"
+    },
+    "data_MS1_SunflowerHelianthus_pos": {
+        "input_files": "../input_MS1_SunflowerHelianthus_pos.txt"
+    },
+    "data_MS1_terra_pos": {
+        "input_files": "../input_MS1_terra_pos.txt"
+    },
+    "data_MS1_fungi_pos": {
+        "input_files": "../input_MS1_fungi_pos.txt"
+    },
+    "data_MS1_all_pos": {
+        "input_files": "../input_MS1_all_pos.txt"
+    },
+    
+    "data_MS1_AndropogonGeradii_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_AndropogonGeradii_neg.txt"
+    },
+    "data_MS1_CichoriumIntybus_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_CichoriumIntybus_neg.txt"
+    },
+    "data_MS1_Leeks_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_Leeks_neg.txt"
+    },
+    "data_MS1_Maize_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_Maize_neg.txt"
+    },
+    "data_MS1_SorghumBicolor_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_SorghumBicolor_neg.txt"
+    },
+    "data_MS1_SunflowerHelianthus_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_SunflowerHelianthus_neg.txt"
+    },
+    "data_MS1_terra_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_terra_neg.txt"
+    },
+    "data_MS1_fungi_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_fungi_neg.txt"
+    },
+    "data_MS1_all_neg": {
+        "polarity": "negative",
+        "input_files": "../input_MS1_all_neg.txt"
+    },
+
+    "data_MS1MS2_AndropogonGeradii_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_AndropogonGeradii_posMode.txt"
+    },
+    "data_MS1MS2_CichoriumIntybus_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_CichoriumIntybus_posMode.txt"
+    },
+    "data_MS1MS2_Leeks_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_Leeks_posMode.txt"
+    },
+    "data_MS1MS2_Maize_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_Maize_posMode.txt"
+    },
+    "data_MS1MS2_SorghumBicolor_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_SorghumBicolor_posMode.txt"
+    },
+    "data_MS1MS2_SunflowerHelianthus_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_SunflowerHelianthus_posMode.txt"
+    },
+    "data_MS1MS2_terra_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_terra_posMode.txt"
+    },
+    "data_MS1MS2_fungi_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_fungi_posMode.txt"
+    },
+    "data_MS1MS2_all_pos": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "input_files": "../samples_all_posMode.txt"
+    },
+
+    "data_MS1MS2_AndropogonGeradii_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_AndropogonGeradii_negMode.txt"
+    },
+    "data_MS1MS2_CichoriumIntybus_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_CichoriumIntybus_negMode.txt"
+    },
+    "data_MS1MS2_Leeks_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_Leeks_negMode.txt"
+    },
+    "data_MS1MS2_Maize_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_Maize_negMode.txt"
+    },
+    "data_MS1MS2_SorghumBicolor_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_SorghumBicolor_negMode.txt"
+    },
+    "data_MS1MS2_SunflowerHelianthus_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_SunflowerHelianthus_negMode.txt"
+    },
+    "data_MS1MS2_terra_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_terra_negMode.txt"
+    },
+    "data_MS1MS2_fungi_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_fungi_negMode.txt"
+    },
+    "data_MS1MS2_all_neg": {
+        "MZmine_batch": "mzmine_batch_files/4.10.6/20minRP_withMSMS.mzbatch",
+        "polarity": "negative",
+        "input_files": "../samples_all_negMode.txt"
+    }
 }
