@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<batch mzmine_version="4.10.1">
+<batch mzmine_version="4.10.11">
     <batchstep method="io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule" module_name="Import MS data" parameter_version="1">
-        <parameter name="File names">
-        </parameter>
+        <parameter name="File names"/>
         <parameter name="Vendor data options">
             <parameter name="Try vendor centroiding">true</parameter>
             <parameter name="Remove calibrant signals (Thermo)">true</parameter>
@@ -41,6 +40,12 @@
                     <parameter name="Noise level"/>
                     <parameter name="Minimum non-zero points">3</parameter>
                     <parameter name="Intensity calculation">Height</parameter>
+                    <parameter name="Smoothing" selected_item="none">
+                        <module name="none"/>
+                        <module name="savitzky_golay">
+                            <parameter name="Width (points)">5</parameter>
+                        </module>
+                    </parameter>
                 </module>
                 <module name="Recursive threshold">
                     <parameter name="Noise level"/>
@@ -70,6 +75,12 @@
                     <parameter name="Noise level"/>
                     <parameter name="Minimum non-zero points">3</parameter>
                     <parameter name="Intensity calculation">Height</parameter>
+                    <parameter name="Smoothing" selected_item="none">
+                        <module name="none"/>
+                        <module name="savitzky_golay">
+                            <parameter name="Width (points)">5</parameter>
+                        </module>
+                    </parameter>
                 </module>
                 <module name="Recursive threshold">
                     <parameter name="Noise level"/>
@@ -122,6 +133,12 @@
                 <parameter name="Noise level"/>
                 <parameter name="Minimum non-zero points">3</parameter>
                 <parameter name="Intensity calculation">Height</parameter>
+                <parameter name="Smoothing" selected_item="none">
+                    <module name="none"/>
+                    <module name="savitzky_golay">
+                        <parameter name="Width (points)">5</parameter>
+                    </module>
+                </parameter>
             </module>
             <module name="Recursive threshold">
                 <parameter name="Noise level"/>
@@ -169,6 +186,12 @@
                 <parameter name="Noise level"/>
                 <parameter name="Minimum non-zero points">3</parameter>
                 <parameter name="Intensity calculation">Height</parameter>
+                <parameter name="Smoothing" selected_item="none">
+                    <module name="none"/>
+                    <module name="savitzky_golay">
+                        <parameter name="Width (points)">5</parameter>
+                    </module>
+                </parameter>
             </module>
             <module name="Recursive threshold">
                 <parameter name="Noise level"/>
@@ -202,7 +225,7 @@
         </parameter>
         <parameter name="Minimum consecutive scans">3</parameter>
         <parameter name="Minimum intensity for consecutive scans">10000.0</parameter>
-        <parameter name="Minimum absolute height">10000.0</parameter>
+        <parameter name="Minimum absolute height">100000.0</parameter>
         <parameter name="m/z tolerance (scan-to-scan)">
             <absolutetolerance>0.0</absolutetolerance>
             <ppmtolerance>5.0</ppmtolerance>
@@ -231,8 +254,8 @@
         <parameter name="Original feature list">REMOVE</parameter>
         <parameter name="MS/MS scan pairing" selected="true">
             <parameter name="MS1 to MS2 precursor tolerance (m/z)">
-                <absolutetolerance>0.01</absolutetolerance>
-                <ppmtolerance>10.0</ppmtolerance>
+                <absolutetolerance>0.0</absolutetolerance>
+                <ppmtolerance>5.0</ppmtolerance>
             </parameter>
             <parameter name="Retention time filter" selected="Use tolerance" unit="MINUTES">0.1</parameter>
             <parameter name="Minimum relative feature height" selected="true">0.25</parameter>
@@ -250,7 +273,7 @@
         <parameter name="Chromatographic threshold">0.109</parameter>
         <parameter name="Minimum search range RT/Mobility (absolute)">0.1</parameter>
         <parameter name="Minimum relative height">0.1</parameter>
-        <parameter name="Minimum absolute height">10000.0</parameter>
+        <parameter name="Minimum absolute height">100000.0</parameter>
         <parameter name="Min ratio of peak top/edge">1.1</parameter>
         <parameter name="Peak duration range (min/mobility)">
             <min>0.1</min>
@@ -429,8 +452,8 @@
             <parameter name="Use Remainder of Kendrick mass">false</parameter>
         </parameter>
         <parameter name="Flexible filter (e.g., annotation)" selected="false">
-            <parameter name="Matching mode"/>
-            <parameter name="Type"/>
+            <parameter name="Matching mode">any</parameter>
+            <parameter name="Type">compound_name</parameter>
             <parameter name="Search value"/>
         </parameter>
         <parameter name="Only identified?">false</parameter>
@@ -571,8 +594,8 @@
         <parameter name="Algorithm" selected_item="Modified cosine">
             <module name="Modified cosine">
                 <parameter name="m/z tolerance">
-                    <absolutetolerance>0.01</absolutetolerance>
-                    <ppmtolerance>20.0</ppmtolerance>
+                    <absolutetolerance>0.0</absolutetolerance>
+                    <ppmtolerance>2.0</ppmtolerance>
                 </parameter>
                 <parameter name="Merge &amp; select fragment scans" selected_item="preset_merged">
                     <module name="simple_merged">
@@ -585,13 +608,13 @@
                     <module name="preset_merged">
                         <parameter name="Presets">representative_scans</parameter>
                         <parameter name="Merging m/z tolerance">
-                            <absolutetolerance>0.008</absolutetolerance>
-                            <ppmtolerance>25.0</ppmtolerance>
+                            <absolutetolerance>0.0</absolutetolerance>
+                            <ppmtolerance>10.0</ppmtolerance>
                         </parameter>
                         <parameter name="Merge">
                             <selected>across_samples</selected>
                         </parameter>
-                        <parameter name="Intensity merge mode">SUMMED</parameter>
+                        <parameter name="Intensity merge mode">AVERAGE</parameter>
                     </module>
                     <module name="input_scans">
                         <parameter name="Select input scans">most_intense_across_samples</parameter>
@@ -651,29 +674,61 @@
                     <parameter name="Intensity filter at &gt;N signals">0.98</parameter>
                 </parameter>
             </module>
+            <module name="DreaMS">
+                <parameter name="DreaMS model"/>
+                <parameter name="Merge &amp; select fragment scans" selected_item="simple_merged">
+                    <module name="simple_merged">
+                        <parameter name="Presets">single_merged_scan</parameter>
+                        <parameter name="Merging m/z tolerance">
+                            <absolutetolerance>0.008</absolutetolerance>
+                            <ppmtolerance>25.0</ppmtolerance>
+                        </parameter>
+                    </module>
+                    <module name="preset_merged">
+                        <parameter name="Presets">single_merged_scan</parameter>
+                        <parameter name="Merging m/z tolerance">
+                            <absolutetolerance>0.008</absolutetolerance>
+                            <ppmtolerance>25.0</ppmtolerance>
+                        </parameter>
+                        <parameter name="Merge">
+                            <selected>across_samples</selected>
+                        </parameter>
+                        <parameter name="Intensity merge mode">MAXIMUM</parameter>
+                    </module>
+                    <module name="input_scans">
+                        <parameter name="Select input scans">most_intense_across_samples</parameter>
+                    </module>
+                </parameter>
+                <parameter name="Min similarity">0.75</parameter>
+                <parameter name="k-nearest neighbors" selected="true">
+                    <parameter name="Num. neighbors">3</parameter>
+                    <parameter name="Min neighbor similarity">0.6</parameter>
+                </parameter>
+                <parameter name="Batch size">32</parameter>
+            </module>
         </parameter>
     </batchstep>
     <batchstep method="io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule" module_name="Spectral library search" parameter_version="3">
         <parameter name="Spectral libraries" type="ALL_IMPORTED"/>
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
-        <parameter name="Merge &amp; select fragment scans" selected_item="simple_merged">
+        <parameter name="Merge &amp; select fragment scans" selected_item="preset_merged">
             <module name="simple_merged">
                 <parameter name="Presets">representative_scans</parameter>
                 <parameter name="Merging m/z tolerance">
-                    <absolutetolerance>0.0015</absolutetolerance>
-                    <ppmtolerance>25.0</ppmtolerance>
+                    <absolutetolerance>0.0</absolutetolerance>
+                    <ppmtolerance>10.0</ppmtolerance>
                 </parameter>
             </module>
             <module name="preset_merged">
                 <parameter name="Presets">representative_scans</parameter>
                 <parameter name="Merging m/z tolerance">
-                    <absolutetolerance>0.0015</absolutetolerance>
-                    <ppmtolerance>25.0</ppmtolerance>
+                    <absolutetolerance>0.0</absolutetolerance>
+                    <ppmtolerance>10.0</ppmtolerance>
                 </parameter>
                 <parameter name="Merge">
                     <selected>across_samples</selected>
                 </parameter>
-                <parameter name="Intensity merge mode">MAXIMUM</parameter>
+                <parameter name="Intensity merge mode">AVERAGE</parameter>
             </module>
             <module name="input_scans">
                 <parameter name="Select input scans">most_intense_across_samples</parameter>
@@ -681,12 +736,12 @@
         </parameter>
         <parameter name="MS level filter" selected="MS2, level = 2">3</parameter>
         <parameter name="Precursor m/z tolerance">
-            <absolutetolerance>0.001</absolutetolerance>
+            <absolutetolerance>0.0</absolutetolerance>
             <ppmtolerance>5.0</ppmtolerance>
         </parameter>
         <parameter name="Spectral m/z tolerance">
-            <absolutetolerance>0.0015</absolutetolerance>
-            <ppmtolerance>25.0</ppmtolerance>
+            <absolutetolerance>0.0</absolutetolerance>
+            <ppmtolerance>10.0</ppmtolerance>
         </parameter>
         <parameter name="Remove precursor">true</parameter>
         <parameter name="Minimum  matched signals">4</parameter>
@@ -703,7 +758,7 @@
             </module>
         </parameter>
         <parameter name="Advanced" selected="true">
-            <parameter name="Retention time tolerance" selected="true" unit="MINUTES">0.2</parameter>
+            <parameter name="Retention time tolerance" selected="false" unit="MINUTES">0.2</parameter>
             <parameter name="Retention index tolerance" selected="false"/>
             <parameter name="CCS tolerance [%]" selected="false">0.05</parameter>
             <parameter name="13C deisotoping" selected="false">
@@ -762,12 +817,20 @@
         </parameter>
         <parameter name="Open folder">false</parameter>
     </batchstep>
+    <batchstep method="io.github.mzmine.modules.io.export_network_graphml.NetworkGraphMlExportModule" module_name="Export spectral networks to graphml (FBMN/IIMN)" parameter_version="1">
+        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
+        <parameter name="Filename">
+            <current_file>C:\output\processing__networks.graphml</current_file>
+            <last_file>C:\output\processing__networks.graphml</last_file>
+        </parameter>
+    </batchstep>
     <batchstep method="io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule" module_name="Export for SIRIUS" parameter_version="2">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
         <parameter name="Filename">
-            <current_file>C:\output\processing__sirius</current_file>
+            <current_file>C:\output\processing__sirius.mgf</current_file>
+            <last_file>C:\output\processing__sirius.mgf</last_file>
         </parameter>
-        <parameter name="Intensity normalization" scientific="true">no_normalization</parameter>
+        <parameter name="Intensity normalization" scientific="false">max100</parameter>
         <parameter name="Merge &amp; select fragment scans" selected_item="preset_merged">
             <module name="simple_merged">
                 <parameter name="Presets">representative_scans</parameter>
@@ -779,13 +842,13 @@
             <module name="preset_merged">
                 <parameter name="Presets">representative_scans</parameter>
                 <parameter name="Merging m/z tolerance">
-                    <absolutetolerance>0.008</absolutetolerance>
-                    <ppmtolerance>25.0</ppmtolerance>
+                    <absolutetolerance>0.0</absolutetolerance>
+                    <ppmtolerance>10.0</ppmtolerance>
                 </parameter>
                 <parameter name="Merge">
                     <selected>across_samples</selected>
                 </parameter>
-                <parameter name="Intensity merge mode">SUMMED</parameter>
+                <parameter name="Intensity merge mode">AVERAGE</parameter>
             </module>
             <module name="input_scans">
                 <parameter name="Select input scans">all_scans</parameter>
@@ -804,32 +867,12 @@
             </module>
         </parameter>
         <parameter name="m/z tolerance">
-            <absolutetolerance>0.002</absolutetolerance>
-            <ppmtolerance>5.0</ppmtolerance>
+            <absolutetolerance>0.0</absolutetolerance>
+            <ppmtolerance>10.0</ppmtolerance>
         </parameter>
         <parameter name="Only rows with annotation">false</parameter>
         <parameter name="Exclude multiple charge">false</parameter>
         <parameter name="Exclude multimers">false</parameter>
-    </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_compoundAnnotations_csv.CompoundAnnotationsCSVExportModule" parameter_version="1">
-        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
-        <parameter name="Filename">
-            <current_file>C:\output\processing__annotations.csv</current_file>
-        </parameter>
-        <parameter name="Top N per method">10</parameter>
-    </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_network_graphml.NetworkGraphMlExportModule" module_name="Export spectral networks to graphml (FBMN/IIMN)" parameter_version="1">
-        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
-        <parameter name="Filename">
-            <current_file>C:\output\processing__networks</current_file>
-        </parameter>
-    </batchstep>
-    <batchstep method="io.github.mzmine.modules.io.export_features_featureML.FeatureMLExportModularModule" module_name="Export to featureML file" parameter_version="1">
-        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
-        <parameter name="Filename">
-            <current_file>J:\playNICE__FungiPaper\260515_1115_UniVie_P81_extracts\mzmine__results\data_MS1MS2_SunflowerHelianthus_pos\data_MS1MS2_SunflowerHelianthus_pos__fml.featureml</current_file>
-        </parameter>
-        <parameter name="Filter rows">ALL</parameter>
     </batchstep>
     <batchstep method="io.github.mzmine.modules.io.export_features_csv.CSVExportModularModule" module_name="Export to CSV file (modular)" parameter_version="1">
         <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
@@ -840,6 +883,20 @@
         <parameter name="Field separator">,</parameter>
         <parameter name="Identification separator">;</parameter>
         <parameter name="Remove empty columns">true</parameter>
+        <parameter name="Filter rows">ALL</parameter>
+    </batchstep>
+    <batchstep method="io.github.mzmine.modules.io.export_compoundAnnotations_csv.CompoundAnnotationsCSVExportModule" module_name="Export all annotations to CSV file" parameter_version="1">
+        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
+        <parameter name="Filename">
+            <current_file>C:\output\processing__annotations.csv</current_file>
+        </parameter>
+        <parameter name="Top N per method">10</parameter>
+    </batchstep>
+    <batchstep method="io.github.mzmine.modules.io.export_features_featureML.FeatureMLExportModularModule" module_name="Export to featureML file" parameter_version="1">
+        <parameter name="Feature lists" type="BATCH_LAST_FEATURELISTS"/>
+        <parameter name="Filename">
+            <current_file>J:\playNICE__FungiPaper\260515_1115_UniVie_P81_extracts\mzmine__results\data_MS1MS2_SunflowerHelianthus_pos\data_MS1MS2_SunflowerHelianthus_pos__fml.featureml</current_file>
+        </parameter>
         <parameter name="Filter rows">ALL</parameter>
     </batchstep>
     <batchstep method="io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule" module_name="Save project as" parameter_version="1">

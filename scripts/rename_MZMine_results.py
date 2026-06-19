@@ -3,10 +3,23 @@
 # ///
 
 import argparse
+import shutil
 from collections import OrderedDict
+from pathlib import Path
 import polars as pl
 import re
 from bs4 import BeautifulSoup
+
+
+def parse_file_arg(value: str) -> tuple[str, str]:
+    """Parse a file argument in 'input$output' format.
+
+    If no '$' is present, input and output are the same path.
+    """
+    if "$" in value:
+        parts = value.split("$", 1)
+        return parts[0], parts[1]
+    return value, value
 
 
 def parse_mgf_file(file_path):
@@ -83,42 +96,57 @@ parser.add_argument(
 )
 parser.add_argument("--graphml", type=str, help="Path to the graphml file")
 parser.add_argument("--mgf", type=str, nargs="+", help="Path to one or more MGF files")
-parser.add_argument(
-    "--file_suffix",
-    type=str,
-    help="Suffix to add to the output file names.  If not specified, will overwrite the existing files",
-    default="",
-)
 
 args = parser.parse_args()
 
 full_feature_table = args.full_feature_table
+annotations = args.annotations
 iimn_fbmn_quant = args.iimn_fbmn_quant
 graphml = args.graphml
 mgfs = args.mgf
-file_suffix = args.file_suffix
+
+# Parse the input and output file paths
+full_feature_table_in, full_feature_table_out = parse_file_arg(full_feature_table)
+annotations_in, annotations_out = parse_file_arg(annotations)
+iimn_fbmn_quant_in, iimn_fbmn_quant_out = parse_file_arg(iimn_fbmn_quant)
+graphml_in, graphml_out = parse_file_arg(graphml)
+mgf_pairs = [parse_file_arg(mgf) for mgf in mgfs]
+
 
 ## show brief overview of the parameters
-print(f"  - Full Feature Table: {full_feature_table}")
-print(f"  - Annotations: {args.annotations}")
-print(f"  - IIMN FBMN Quantification: {iimn_fbmn_quant}")
-print(f"  - GraphML: {graphml}")
-print(f"  - MGFs: {mgfs}")
+print(f"  - Full Feature Table: {full_feature_table_in} -> {full_feature_table_out}")
+print(f"  - Annotations: {annotations_in} -> {annotations_out}")
+print(f"  - IIMN FBMN Quantification: {iimn_fbmn_quant_in} -> {iimn_fbmn_quant_out}")
+print(f"  - GraphML: {graphml_in} -> {graphml_out}")
+print(f"  - MGFs: {mgf_pairs}")
 
 
-# Read the full feature table CSV file
+# Copy each input to its output before any modification
+def _copy_if_different(src: str, dst: str) -> None:
+    if Path(src).resolve() != Path(dst).resolve():
+        shutil.copy2(src, dst)
+
+
+_copy_if_different(full_feature_table_in, full_feature_table_out)
+_copy_if_different(annotations_in, annotations_out)
+_copy_if_different(iimn_fbmn_quant_in, iimn_fbmn_quant_out)
+_copy_if_different(graphml_in, graphml_out)
+for mgf_in, mgf_out in mgf_pairs:
+    _copy_if_different(mgf_in, mgf_out)
+
+# Read the full feature table CSV file (from output copy)
 full_feature_table_df = pl.read_csv(
-    full_feature_table, separator=",", has_header=True, infer_schema_length=None
+    full_feature_table_out, separator=",", has_header=True, infer_schema_length=None
 )
 
-# Read the annotations CSV file
+# Read the annotations CSV file (from output copy)
 df_annotations = pl.read_csv(
-    args.annotations, separator=",", has_header=True, infer_schema_length=None
+    annotations_out, separator=",", has_header=True, infer_schema_length=None
 )
 
-# Read the IIMN FBMN quantification CSV file
+# Read the IIMN FBMN quantification CSV file (from output copy)
 iimn_fbmn_quant_df = pl.read_csv(
-    iimn_fbmn_quant,
+    iimn_fbmn_quant_out,
     separator=",",
     has_header=True,
     truncate_ragged_lines=True,
@@ -126,8 +154,8 @@ iimn_fbmn_quant_df = pl.read_csv(
 )
 
 mgfs_data = {}
-for mgf in mgfs:
-    mgfs_data[mgf] = parse_mgf_file(mgf)
+for _mgf_in, mgf_out in mgf_pairs:
+    mgfs_data[mgf_out] = parse_mgf_file(mgf_out)
 
 print("\nNumber of features:", len(full_feature_table_df))
 
@@ -184,7 +212,7 @@ df_annotations = df_annotations.with_columns(
 
 # Update the FEATURE_ID in the MGF files
 for mgf, blocks in mgfs_data.items():
-    print(f"Updating FEATURE_ID in {mgf}")
+    print(f"Updating FEATURE_ID in {mgf} (output)")
     for block in blocks:
         if "FEATURE_ID" in block:
             try:
@@ -195,29 +223,22 @@ for mgf, blocks in mgfs_data.items():
             block["FEATURE_ID"] = str(feature_id) + add
             # print(f"Updated FEATURE_ID: {block['FEATURE_ID']}")
 
-# Export the updated DataFrames to CSV files
-output_full_feature_table_path = full_feature_table.replace(
-    ".csv", f"{file_suffix}.csv"
-)
-full_feature_table_df.write_csv(output_full_feature_table_path)
-print(f"Exported updated Full Feature Table to {output_full_feature_table_path}")
+# Write the updated DataFrames back to the output files
+full_feature_table_df.write_csv(full_feature_table_out)
+print(f"Exported updated Full Feature Table to {full_feature_table_out}")
 
-output_iimn_fbmn_quant_path = iimn_fbmn_quant.replace(".csv", f"{file_suffix}.csv")
-iimn_fbmn_quant_df.write_csv(output_iimn_fbmn_quant_path)
-print(f"Exported updated IIMN FBMN Quantification to {output_iimn_fbmn_quant_path}")
+iimn_fbmn_quant_df.write_csv(iimn_fbmn_quant_out)
+print(f"Exported updated IIMN FBMN Quantification to {iimn_fbmn_quant_out}")
 
-output_annotations_path = args.annotations.replace(".csv", f"{file_suffix}.csv")
-df_annotations.write_csv(output_annotations_path)
-print(f"Exported updated Annotations to {output_annotations_path}")
+df_annotations.write_csv(annotations_out)
+print(f"Exported updated Annotations to {annotations_out}")
 
-for mgf, blocks in mgfs_data.items():
-    # Export the updated MGF file
-    output_mgf_path = mgf.replace(".mgf", f"{file_suffix}.mgf")
-    export_mgf_file(blocks, output_mgf_path)
-    print(f"Exported updated MGF to {output_mgf_path}")
+for mgf_out, blocks in mgfs_data.items():
+    export_mgf_file(blocks, mgf_out)
+    print(f"Exported updated MGF to {mgf_out}")
 
-# Parse the graphml file
-with open(graphml, "r") as file:
+# Parse the graphml file (from output copy)
+with open(graphml_out, "r") as file:
     soup = BeautifulSoup(file, "xml")
 
 # Update the node IDs in the graphml file
@@ -251,9 +272,8 @@ for edge in soup.find_all("edge"):
     if add_target != "":
         edge["target"] = str(target) + add_target
 
-# Write the updated graphml to a new file
-output_graphml_path = graphml.replace(".graphml", f"{file_suffix}.graphml")
-with open(output_graphml_path, "w") as file:
+# Write the updated graphml to the output file
+with open(graphml_out, "w") as file:
     file.write(
         re.sub(
             "<binary>\\s*(.*)\\s*</binary>",
@@ -262,4 +282,4 @@ with open(output_graphml_path, "w") as file:
         )
     )
 
-print(f"Exported updated GraphML to {output_graphml_path}")
+print(f"Exported updated GraphML to {graphml_out}")

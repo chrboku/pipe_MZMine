@@ -494,6 +494,15 @@ def process_task(task: str, config: dict, log_fn) -> bool:
         if config.get("step_rename_ids", True):
             log_fn("\n[Step 1.1] Renaming feature IDs ...")
             rename_log = _tool_log_file(outdir, 2, "rename_feature_ids")
+            for f in ["__full_feature_table.csv", "__iimn_fbmn.mgf", "__sirius.mgf"]:
+                src = str(outdir / f"{task}{f}")
+                dest = str(outdir / f"{task}_4GNPS_{f}")
+                # copy file
+                if Path(src).exists():
+                    shutil.copy2(src, dest)
+                    log_fn(f"  copied {src} -> {dest}")
+                else:
+                    log_fn(f"  WARNING – expected file not found: {src}")
             _run_command(
                 [
                     "uv",

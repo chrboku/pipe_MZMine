@@ -1,6 +1,6 @@
 {
     "name": "mzmine_pipe",
-    "version": "0.11.0",
+    "version": "0.12.0",
     "description": "Pipeline for MZmine",
     "executable_file": "run.bat",
     "license": "MIT",
